@@ -11,3 +11,17 @@ export function onInstalled(
 ): void {
   chrome.runtime.onInstalled.addListener(handler);
 }
+
+// chrome.runtime.onMessage は、拡張機能内の別コンテキスト(background⇔content script等)
+// からのメッセージを受信するイベント。ハンドラの戻り値でtrueを返すと「sendResponseを
+// 非同期に呼ぶ」ことをChromeに伝えられる仕様のため、型もそれに合わせてある
+// (このプロジェクトではsendResponseを同期的に呼ぶだけなので、常にfalseを返す想定)。
+export function onMessage(
+  handler: (
+    message: unknown,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void,
+  ) => boolean,
+): void {
+  chrome.runtime.onMessage.addListener(handler);
+}
