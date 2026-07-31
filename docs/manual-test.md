@@ -60,19 +60,31 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 カメラ判定(Phase5)がまだ無いため、拡張機能アイコンのクリックを「視聴⇔非視聴が切り替わった」
 ことの仮のトリガーとして使う(`src/shared/chrome/action.ts`のコメント参照)。
 
-- [ ] YouTubeの動画再生ページ(`/watch`)で動画を再生し、拡張機能アイコンをクリックすると
+- [x] YouTubeの動画再生ページ(`/watch`)で動画を再生し、拡張機能アイコンをクリックすると
       一時停止する(F-10, F-12)
-- [ ] もう一度アイコンをクリックすると再生が再開する(自動再開ON固定のため。F-11)
-- [ ] service workerのコンソールに`state=... -> command=... response=...`のログが出て、
+      — 確認日: 2026-07-31(目視確認)
+- [x] もう一度アイコンをクリックすると再生が再開する(自動再開ON固定のため。F-11)
+      — 確認日: 2026-07-31(目視確認)
+- [x] service workerのコンソールに`state=... -> command=... response=...`のログが出て、
       content script側のタブでpause/playが実行されていることが追える
-- [ ] ホバープレビュー動画が存在しうる一覧ページ(検索結果・ホーム等)を開いた状態で
+      — 確認日: 2026-07-31(目視確認)
+- [x] ホバープレビュー動画が存在しうる一覧ページ(検索結果・ホーム等)を開いた状態で
       アイコンをクリックしても、意図しない小さいプレビュー動画ではなく、実際に再生中の
       メイン動画(あれば)が制御される(「可視かつ最大面積」の選定ルールの確認)
-- [ ] 動画Aを視聴中に別の動画Bへページ内遷移(SPA、URLだけ変わりリロードなし)した後、
+      — 確認日: 2026-07-31(目視確認)
+- [x] 動画Aを視聴中に別の動画Bへページ内遷移(SPA、URLだけ変わりリロードなし)した後、
       アイコンをクリックすると動画Bが正しく制御される(video要素の再クエリが
       機能していることの確認。E-5決定事項)
-- [ ] YouTube以外のタブ(Prime Videoや無関係なサイト)でアイコンをクリックしてもエラーで
+      — 確認日: 2026-07-31(目視確認)
+- [x] YouTube以外のタブ(Prime Videoや無関係なサイト)でアイコンをクリックしてもエラーで
       壊れない(content script側が`unsupported-site`/`no-video-found`を返すのみ)
+      — 確認日: 2026-07-31。content scriptが注入されていない無関係なサイト(Google
+      トップページ等)で確認。`chrome.tabs.sendMessage`が
+      `Could not establish connection. Receiving end does not exist.`を投げるが、
+      `sendMessageToTab()`内のtry/catchで受け止められ`console.warn`ログ→`response= null`
+      として処理が正常に続くことをservice workerのコンソールログで確認(赤字の
+      Uncaughtエラーにはなっていない)。Prime Video等content script注入済みサイトでの
+      `unsupported-site`/`no-video-found`は未確認(任意項目のため見送り)
 
 ## カメラ・顔検出
 
@@ -101,4 +113,4 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 - [ ] 一時停止発生時に視覚的通知が出る(F-22)
 
 ---
-最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 04cdc2e(Phase 3 Chrome拡張の骨組み, dist/を「パッケージ化されていない拡張機能」として読み込み・YouTube/Prime Videoでのcontent script起動確認まで)
+最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 224aa55(Phase 4 YouTube pause/play制御, 拡張機能アイコンクリックによるpause/resume・SPA遷移・非対象サイトでのエラー無しを確認)
