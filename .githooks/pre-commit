@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# 品質ゲート: これが通らない限り commit できない(Claude・人間どちらの操作でも強制)
+# 有効化: git config core.hooksPath .githooks
+set -e
+
+echo "[pre-commit] typecheck..."
+npm run --silent typecheck
+
+echo "[pre-commit] lint..."
+npm run --silent lint
+
+echo "[pre-commit] unit tests..."
+npm run --silent test -- --run
+
+echo "[pre-commit] OK"

@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx biome:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ],
+    "ask": [
+      "Bash(npm install:*)",
+      "Bash(npm i:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx biome format --write \"$CLAUDE_FILE_PATHS\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

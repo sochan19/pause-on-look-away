@@ -1,0 +1,13 @@
+# 依存パッケージ・ビルド成果物(B-5: 最終的な扱いは docs/DECISIONS.md で検討中の暫定設定)
+node_modules/
+dist/
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# 環境変数
+.env
+.env.*
