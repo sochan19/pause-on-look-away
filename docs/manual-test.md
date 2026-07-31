@@ -163,24 +163,34 @@ Windows側 netsh portproxy + ファイアウォール → Surfaceでダウンロ
 `chrome://extensions`で読み込み)でSurface実機に転送して確認する。
 Amazon Prime Videoアカウント(Prime会員資格)での実際の作品再生が必要。
 
-- [ ] 再生中に拡張機能側から実行される`video.pause()`が実際に効く(DRM/EME
+- [x] 再生中に拡張機能側から実行される`video.pause()`が実際に効く(DRM/EME
       ストリームに対してpause()自体が問題なく動作するかの確認。F-13)
-- [ ] pause実行後、Prime Video自身のプレイヤーUI(一時停止アイコン、進行バー等)
+      — 確認日: 2026-07-31(Surface実機)。実際の映像が問題なく一時停止した
+- [x] pause実行後、Prime Video自身のプレイヤーUI(一時停止アイコン、進行バー等)
       が実際の再生状態(停止中)と食い違わずに表示されるか
-      — 記録: ____
-- [ ] resume実行後も同様に、プレイヤーUI(再生アイコン)が実際の再生状態(再生中)
+      — 確認日: 2026-07-31(Surface実機)。見た目と実態が一致しており、
+      ズレ・遅延は感じられなかった
+- [x] resume実行後も同様に、プレイヤーUI(再生アイコン)が実際の再生状態(再生中)
       と一致するか
-      — 記録: ____
-- [ ] 広告・サムネイル・ミニプレイヤー等が画面内に存在する状態でも、
+      — 確認日: 2026-07-31(Surface実機)。pause時と同様に一致しており、
+      ズレ・遅延は感じられなかった
+- [x] 広告・サムネイル・ミニプレイヤー等が画面内に存在する状態でも、
       `findPrimaryVideo()`(「可視かつ最大面積」選定)が正しく本編videoを選ぶか
-- [ ] Prime Video内でのSPA遷移(作品→別の作品、シリーズの次話など)後も、
+      — 確認日: 2026-07-31(Surface実機)。広告表示中の状態で確認し、
+      意図しない広告側videoではなく本編側が制御されることを確認
+- [x] Prime Video内でのSPA遷移(作品→別の作品、シリーズの次話など)後も、
       メッセージ受信のたびにDOMを再クエリする設計(E-5決定事項)のままで
       pause/resumeが機能し続けるか
-- [ ] Prime Videoの動画プレイヤーがiframe内に描画されていないか
+      — 確認日: 2026-07-31(Surface実機)。次の話数に遷移した後もpause/resumeが
+      問題なく機能することを確認
+- [x] Prime Videoの動画プレイヤーがiframe内に描画されていないか
       (`manifest.json`の`content_scripts`は`all_frames`未指定=デフォルトで
       トップフレームのみに注入されるため、プレイヤーがiframe内実装だと
       video要素に到達できない可能性がある。code-reviewerレビューでの指摘事項)
-      — 記録: ____
+      — 確認日: 2026-07-31。開発者ツールのElementsパネルで確認したところ、
+      `<video>`タグは`<iframe>`に包まれておらずトップフレーム内に直接存在していた
+      (`<video width="100%" height="100%" aria-hidden="true">`)。
+      iframe起因の到達不可リスクは無いことを確認
 
 ## 設定 UI
 
@@ -190,3 +200,4 @@ Amazon Prime Videoアカウント(Prime会員資格)での実際の作品再生�
 
 ---
 最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 9f30e5b(Phase 5 offscreen documentへのカメラ処理統合。Surface実機で本物の視線検出によるYouTube自動pause/resumeを一気通貫で確認。検証中にoptionsページ方式への切り替え・CSP(wasm-unsafe-eval)修正の2件のバグを発見・対応)
+最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: e78d605(Phase 6 Prime Videoのpause/resume制御を有効化。Surface実機でPrime Video実アカウントの実際の作品再生を使い、DRM/EMEストリームに対するpause/resumeとプレイヤーUIとの同期、広告表示中の本編video選定、話数間のSPA遷移、iframe構造の有無を確認)

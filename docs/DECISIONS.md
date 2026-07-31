@@ -79,7 +79,14 @@
    `recomputeCameraActivation()`がタブの切り替え・URL変化・ブラウザ起動のたびに
    再計算し、`src/offscreen/offscreen.ts`の`reconcileCameraState()`が目標状態と
    実際の状態を一致させ続ける
-3. **Prime VideoのDRM**: video.pause()自体はDRMの影響を受けない見込みだが、プレイヤーUIとの整合(再開時の挙動)は実機検証(Phase 6)
+3. **Prime VideoのDRM**: ✅ **video.pause()/play()はDRM(EME/Widevine)ストリームに対しても
+   問題なく動作し、Prime Video自身のプレイヤーUI(一時停止/再生アイコン、進行バー)も
+   実際の再生状態とズレなく同期することを実機検証で確認**(Phase6、2026-07-31、Surface実機
+   + 実Prime Videoアカウント)。広告表示中でも`findPrimaryVideo()`(「可視かつ最大面積」)が
+   本編videoを正しく選び、話数間のSPA遷移後もpause/resumeが機能し続けることも確認済み。
+   また、動画プレイヤーは`<iframe>`に包まれずトップフレームに直接描画されていることも確認
+   したため、`content_scripts`の`all_frames`未指定(デフォルトでトップフレームのみに注入)
+   のままで問題ないと判断した。詳細は`docs/manual-test.md`の「Phase 6」参照
 4. **対象videoの特定**: ✅ **「可視 かつ 最大面積」で選定**(Phase4で決定)。`src/shared/video-selection.ts`の`selectPrimaryVideoIndex()`で実装。「再生中かどうか」を条件にしないのは、この拡張機能自身がpause()を呼んだ直後は対象videoが一時停止中になり、resume時に同じ基準で再選択できなくなる問題を避けるため
 5. **YouTube SPA遷移**: ✅ **専用の監視の仕組み(MutationObserver/`yt-navigate-finish`)は導入しない**(Phase4で決定)。content scriptがbackgroundからのメッセージを受け取るたびに`findPrimaryVideo()`でDOMを再クエリする設計にすることで、キャッシュを持たないためSPA遷移が自然に無害化される。将来「video要素の有無を能動的に監視する」要件が出てきたら再検討する
 6. **自動再開のデフォルト値**: ✅ **ON(`AUTO_RESUME_ENABLED = true`)で固定**(Phase4で決定、`src/shared/constants.ts`)。Phase 7で設定画面ができるまではこの固定値を使う。設定画面実装時にこの初期値でよいか改めてユーザーへ確認する
