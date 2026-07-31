@@ -60,6 +60,6 @@
 1. **カメラ許可フロー**: offscreen documentは不可視のためgetUserMediaの許可ダイアログを自力で出せない可能性が高い。「初回のみoptionsページ(可視ページ)で許可を取得→以後offscreenで利用」を第一候補としてPhase 5で検証
 2. **offscreen documentのライフサイクル**: service workerはアイドルで終了する。offscreen(reason: USER_MEDIA)を常駐させる設計と、視聴していない時にカメラを止める省電力設計の両立方法
 3. **Prime VideoのDRM**: video.pause()自体はDRMの影響を受けない見込みだが、プレイヤーUIとの整合(再開時の挙動)は実機検証(Phase 6)
-4. **対象videoの特定**: YouTubeはホバープレビュー等でvideoが複数存在。「再生中 かつ 最大面積」等の選定ルールを決める
-5. **YouTube SPA遷移**: MutationObserverに加え`yt-navigate-finish`イベントの利用を検討
-6. **自動再開のデフォルト値**: ON/OFFどちらを初期値にするか(誤検知時の体験に直結)。Phase 7のUI実装時にユーザーへ確認
+4. **対象videoの特定**: ✅ **「可視 かつ 最大面積」で選定**(Phase4で決定)。`src/shared/video-selection.ts`の`selectPrimaryVideoIndex()`で実装。「再生中かどうか」を条件にしないのは、この拡張機能自身がpause()を呼んだ直後は対象videoが一時停止中になり、resume時に同じ基準で再選択できなくなる問題を避けるため
+5. **YouTube SPA遷移**: ✅ **専用の監視の仕組み(MutationObserver/`yt-navigate-finish`)は導入しない**(Phase4で決定)。content scriptがbackgroundからのメッセージを受け取るたびに`findPrimaryVideo()`でDOMを再クエリする設計にすることで、キャッシュを持たないためSPA遷移が自然に無害化される。将来「video要素の有無を能動的に監視する」要件が出てきたら再検討する
+6. **自動再開のデフォルト値**: ✅ **ON(`AUTO_RESUME_ENABLED = true`)で固定**(Phase4で決定、`src/shared/constants.ts`)。Phase 7で設定画面ができるまではこの固定値を使う。設定画面実装時にこの初期値でよいか改めてユーザーへ確認する
