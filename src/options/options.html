@@ -18,6 +18,29 @@
       button {
         padding: 8px 16px;
       }
+      h2 {
+        font-size: 16px;
+        margin-top: 32px;
+        border-top: 1px solid #ccc;
+        padding-top: 16px;
+      }
+      .setting-row {
+        margin-bottom: 16px;
+      }
+      .setting-row label {
+        display: block;
+        margin-bottom: 4px;
+      }
+      .setting-hint {
+        font-size: 12px;
+        color: #666;
+        margin: 2px 0 0;
+      }
+      #settings-status {
+        font-size: 13px;
+        color: #2a7a2a;
+        min-height: 1.2em;
+      }
     </style>
   </head>
   <body>
@@ -26,6 +49,53 @@
     <button id="request-permission-button" type="button">
       カメラを許可する
     </button>
+
+    <h2>動作設定</h2>
+
+    <div class="setting-row">
+      <label>
+        <input type="checkbox" id="enabled-checkbox" />
+        拡張機能を有効にする
+      </label>
+      <p class="setting-hint">
+        オフにすると、YouTube/Prime Videoを開いていてもカメラは起動せず、
+        自動一時停止も行われません。
+      </p>
+    </div>
+
+    <div class="setting-row">
+      <label for="facing-threshold-input">判定角度のしきい値(度)</label>
+      <input type="number" id="facing-threshold-input" step="1" />
+      <p class="setting-hint">
+        顔がこの角度以上カメラから逸れたら「よそ見」の候補とみなします。
+        数値を大きくすると、多少よそ見しても視聴中とみなす緩い判定になります。
+      </p>
+    </div>
+
+    <div class="setting-row">
+      <label for="confirmation-frame-count-input">
+        ディレイフレーム数(1フレーム約0.1秒)
+      </label>
+      <input type="number" id="confirmation-frame-count-input" step="1" />
+      <p class="setting-hint">
+        「よそ見」候補がこのフレーム数だけ連続したら、実際に一時停止します。
+        数値を大きくすると、まばたきや一瞬の首振りで反応しにくくなりますが、
+        反応も遅くなります。
+      </p>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        <input type="checkbox" id="auto-resume-checkbox" />
+        視聴に戻ったら自動で再生を再開する
+      </label>
+      <p class="setting-hint">
+        オフにすると、一時停止後は手動で再生ボタンを押すまで再生されません。
+      </p>
+    </div>
+
+    <p id="settings-status"></p>
+
     <script type="module" src="/src/options/options.ts"></script>
   </body>
 </html>

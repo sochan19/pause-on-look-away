@@ -89,4 +89,14 @@
    のままで問題ないと判断した。詳細は`docs/manual-test.md`の「Phase 6」参照
 4. **対象videoの特定**: ✅ **「可視 かつ 最大面積」で選定**(Phase4で決定)。`src/shared/video-selection.ts`の`selectPrimaryVideoIndex()`で実装。「再生中かどうか」を条件にしないのは、この拡張機能自身がpause()を呼んだ直後は対象videoが一時停止中になり、resume時に同じ基準で再選択できなくなる問題を避けるため
 5. **YouTube SPA遷移**: ✅ **専用の監視の仕組み(MutationObserver/`yt-navigate-finish`)は導入しない**(Phase4で決定)。content scriptがbackgroundからのメッセージを受け取るたびに`findPrimaryVideo()`でDOMを再クエリする設計にすることで、キャッシュを持たないためSPA遷移が自然に無害化される。将来「video要素の有無を能動的に監視する」要件が出てきたら再検討する
-6. **自動再開のデフォルト値**: ✅ **ON(`AUTO_RESUME_ENABLED = true`)で固定**(Phase4で決定、`src/shared/constants.ts`)。Phase 7で設定画面ができるまではこの固定値を使う。設定画面実装時にこの初期値でよいか改めてユーザーへ確認する
+6. **自動再開のデフォルト値**: ✅ **ON(`autoResumeEnabled: true`)で固定**(Phase4で決定)。Phase7で設定画面(`src/shared/settings.ts`の`DEFAULT_SETTINGS`)を実装する際、この初期値を維持してよいかユーザーへ再確認し、維持することで確定した
+7. **F-22(一時停止の視覚的通知)**: ✅ **Phase7では見送り**(2026-07-31、ユーザーとの相談により決定)。
+   バッジ表示(`chrome.action.setBadgeText()`)・OS通知(`chrome.notifications`、要`notifications`権限)・
+   ページ内オーバーレイの3案を提示したところ、そもそも「一時停止=動画が固まる・音が
+   止まる」という現象自体が既に十分なフィードバックであり、追加の通知は必須ではないと
+   判断された。実際に使ってみて「わかりにくい」と感じる場面が出てきたら、後続フェーズで
+   再検討する(その場合も上記3案とその長所・短所は再利用できる)
+8. **`storage`権限の追加**: ✅ **Phase7でmanifest.jsonの`permissions`に追加**(2026-07-31、
+   ユーザー確認済み)。F-20(拡張機能の有効/無効切り替え)・F-21(感度・自動再開の設定化)を
+   `chrome.storage.sync`で永続化するために必要。architecture.md 4章で元々想定されていた
+   権限でもある

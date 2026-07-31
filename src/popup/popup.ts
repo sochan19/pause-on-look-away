@@ -10,7 +10,9 @@
 // 許可取得の実処理はoptionsページ(通常のタブとして開かれる)に任せ、
 // popupは状態表示とoptionsページへの誘導ボタンだけを持つ。
 //
-// 本格的な設定画面(カメラON/OFF、感度調整等)はPhase 7で実装する。
+// 本格的な設定画面(拡張機能の有効/無効、感度調整、自動再開等)はPhase 7で
+// optionsページ側に実装した。popupはこのまま最小限の実装に留める
+// (小さいポップアップ内に設定項目を詰め込むと操作しにくくなるため)。
 
 import { openOptionsPage } from "../shared/chrome/runtime";
 import { requireNonNull } from "../shared/dom-utils";
