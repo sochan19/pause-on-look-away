@@ -12,25 +12,16 @@ import {
   CONFIRMATION_FRAME_COUNT,
   FACING_THRESHOLD_DEG,
 } from "./shared/constants";
-import { computeHeadRotationDegrees } from "./shared/head-pose";
+import { requireNonNull } from "./shared/dom-utils";
+import {
+  createFaceLandmarker,
+  extractHeadRotation,
+} from "./shared/face-detector";
 import {
   createInitialHysteresisState,
   deriveCandidateState,
   updateHysteresisState,
 } from "./shared/viewing-state";
-
-// document.querySelector() は「見つからない可能性」を型に含む(戻り値が `T | null`)。
-// main()やdetectLoop()など別の関数から参照する際、TypeScriptは関数境界をまたいだ
-// null チェックの絞り込みをしてくれない(constでも同様)ため、ここで「無ければ即エラー」
-// というヘルパーに通し、以降は非null型の変数として扱えるようにする。
-function requireNonNull<T>(value: T | null, errorMessage: string): T {
-  if (value === null) {
-    // index.html側の要素が見つからない = HTMLの構造が壊れている異常事態なので、
-    // ここで早期に気づけるようにエラーを投げる(通常の実行パスでは起こらないはず)。
-    throw new Error(errorMessage);
-  }
-  return value;
-}
 
 const videoEl = requireNonNull(
   document.querySelector<HTMLVideoElement>("#camera-preview"),
@@ -99,30 +90,12 @@ async function main(): Promise<void> {
 
     statusEl.textContent = "顔検出モデルを読み込んでいます...";
 
-    // MV3(Chrome拡張の最新仕様)はリモートコードの実行を禁止しているため、
-    // MediaPipeのwasm本体・顔検出モデルはCDNから取得せず、
-    // scripts/fetch-mediapipe-assets.mjs でローカルに用意したファイル
-    // (public/mediapipe/ 以下。Viteの開発サーバー/ビルドがそのまま静的配信する)を使う。
-    const faceLandmarker = await FaceLandmarker.createFromOptions(
-      {
-        wasmLoaderPath: "/mediapipe/wasm/vision_wasm_internal.js",
-        wasmBinaryPath: "/mediapipe/wasm/vision_wasm_internal.wasm",
-      },
-      {
-        baseOptions: {
-          modelAssetPath: "/mediapipe/models/face_landmarker.task",
-          // GPU側で推論させることでCPU負荷を抑える(N-01: 動画再生を阻害しない負荷に
-          // 抑える要件に対応)。GPUが使えない環境ではここで失敗する可能性があり、
-          // その場合は下のcatch節でエラー表示される(要実機確認: docs/manual-test.md)。
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-        // これをtrueにすると、検出結果に顔の回転行列(facialTransformationMatrixes)が
-        // 含まれるようになる。head-pose.tsのcomputeHeadRotationDegrees()はこの行列を入力とする。
-        outputFacialTransformationMatrixes: true,
-      },
-    );
+    // FaceLandmarkerの生成(wasm/モデルパス指定・GPU delegate設定)は、
+    // 将来offscreen document(Phase5)からも同じ設定で使うため
+    // src/shared/face-detector.ts に共通化してある。ここではそれを呼ぶだけ。
+    // GPUが使えない環境では失敗する可能性があり、その場合は下のcatch節で
+    // エラー表示される(要実機確認: docs/manual-test.md)。
+    const faceLandmarker = await createFaceLandmarker();
     activeFaceLandmarker = faceLandmarker;
 
     statusEl.textContent = "検出中...";
@@ -154,10 +127,7 @@ function detectLoop(faceLandmarker: FaceLandmarker, stream: MediaStream): void {
       );
     }
 
-    const rotationMatrix = result.facialTransformationMatrixes[0]?.data;
-    const rotation = rotationMatrix
-      ? computeHeadRotationDegrees(rotationMatrix)
-      : null;
+    const rotation = extractHeadRotation(result);
 
     // 1フレームごとの候補状態(looking/away)を求める。顔が検出できない場合は
     // deriveCandidateState()内でaway扱いになる(要件F-04)。
