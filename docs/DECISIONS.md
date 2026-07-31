@@ -57,15 +57,20 @@
 
 **これは「今チャットで決めるもの」ではなく、実装時にClaude Codeが調査・PoCを行い、選択肢を提示してから確定する項目です。** 該当Phaseに来るまでは何もしなくて問題ありません。
 
-1. **カメラ許可フロー**: ✅ **拡張機能アイコンのpopupで初回許可を取得**することに決定
-   (Phase5)。offscreen documentは不可視のためgetUserMediaの許可ダイアログを自力で
-   出せないことをWeb検索(Chrome公式ドキュメント・GoogleChrome社のissue)で確認済み。
-   popup内でのボタンクリック(ユーザー操作)を契機にgetUserMedia()を呼び、許可されれば
-   その場でトラックを止める(許可を得ることだけが目的)。以後は同一オリジン
-   (`chrome-extension://<id>`)なのでoffscreen documentからの呼び出しは許可ダイアログ
-   なしで成功する。popupはフォーカスを失うと自動的に閉じる仕様のため、許可ダイアログ
-   表示中にpopupが閉じてしまうリスクは実機検証が必要(`docs/manual-test.md`参照)。
-   問題があればoptionsページ方式へ切り替える
+1. **カメラ許可フロー**: ✅ **optionsページ(`options_ui`、`open_in_tab: true`で通常の
+   タブとして開く)で初回許可を取得**することに確定(Phase5)。
+   当初は拡張機能アイコンのpopupで許可取得する設計にしていたが、**実機検証で
+   popupから`getUserMedia()`を呼ぶと許可ダイアログが表示されず即座に
+   `NotAllowedError`になることを確認**(2026-07-31)。popupは正式なタブとして
+   扱われないため許可ダイアログを表示できないというChromeの制約による(Web検索での
+   事前調査でも「popupではなくoptionsページ/タブを使うべき」という複数の情報源が
+   あり、想定していたリスクが実際に発生した形)。
+   `src/popup/popup.ts`は状態表示(`navigator.permissions.query()`。これは
+   popupから呼んでも問題ない)と`chrome.runtime.openOptionsPage()`での誘導のみに
+   縮小し、実際の許可取得(`getUserMedia()`)は`src/options/options.ts`
+   (通常タブとして開かれる)で行う。許可を得ることだけが目的なので、成功したら
+   その場でトラックを止める。以後は同一オリジン(`chrome-extension://<id>`)なので
+   offscreen documentからの呼び出しは許可ダイアログなしで成功する想定(要手動確認)
 2. **offscreen documentのライフサイクル**: ✅ **offscreen documentは常駐させ続け、
    カメラストリーム(getUserMedia)の開始/停止だけをactiveタブが
    YouTube/Prime Videoかどうかに連動させる**ことに決定(Phase5)。MediaPipeモデルの

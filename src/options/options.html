@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gaze-Aware Playback — 設定</title>
+    <style>
+      body {
+        max-width: 480px;
+        margin: 40px auto;
+        padding: 0 16px;
+        font-family: sans-serif;
+      }
+      #status {
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+      button {
+        padding: 8px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Gaze-Aware Playback — 設定</h1>
+    <p id="status">確認中...</p>
+    <button id="request-permission-button" type="button">
+      カメラを許可する
+    </button>
+    <script type="module" src="/src/options/options.ts"></script>
+  </body>
+</html>

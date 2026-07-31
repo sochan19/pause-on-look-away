@@ -36,6 +36,28 @@ export function onMessage(
 }
 
 /**
+ * options page(通常のタブとして開くページ)を開く。
+ *
+ * popup(拡張機能アイコンをクリックした時に開く小さいウィンドウ)は正式な
+ * タブとして扱われないため、getUserMedia()の許可ダイアログを表示できない
+ * (実機検証で確認。popupから直接呼ぶと即座にNotAllowedErrorになる)。
+ * そのためpopup.tsはこの関数でoptionsページ(タブとして開く。manifest.jsonの
+ * options_ui.open_in_tab: trueで指定)を開き、実際の許可取得は
+ * src/options/options.tsで行う。
+ *
+ * 失敗は基本的に起こらない想定(manifest.jsonにoptions_uiを宣言済みのため)だが、
+ * 万が一失敗した場合にボタンを押しても何も起きないように見えてしまわないよう、
+ * sendMessage()と同じくここでまとめてcatchしログだけ出す。
+ */
+export async function openOptionsPage(): Promise<void> {
+  try {
+    await chrome.runtime.openOptionsPage();
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} openOptionsPage failed:`, error);
+  }
+}
+
+/**
  * 拡張機能内の他のコンテキスト(background等)へメッセージを送る。
  * offscreen documentからbackgroundへ確定状態の変化を通知する用途などに使う。
  *
