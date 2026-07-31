@@ -85,6 +85,9 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
       として処理が正常に続くことをservice workerのコンソールログで確認(赤字の
       Uncaughtエラーにはなっていない)。Prime Video等content script注入済みサイトでの
       `unsupported-site`/`no-video-found`は未確認(任意項目のため見送り)
+      — **Phase6での注記**: Phase6でPrime Video除外(`unsupported-site`)自体を撤去した
+      ため、この確認記録は当時(Phase4時点)の挙動であり、現在はPrime Videoでも
+      `no-video-found`(video未検出時)以外はpause/resumeが実行される。
 
 ## Phase 5: offscreen documentへのカメラ処理統合
 
@@ -153,10 +156,31 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 - [ ] ページ内遷移(動画→別の動画)後も制御が効く(Phase4で確認済みのpause/resume経路がそのまま使われるため、カメラ判定と組み合わせても機能するかの確認)
 - [ ] ホバープレビュー動画がある一覧ページで誤った video を操作しない(Phase4で確認済み)
 
-## Prime Video
+## Phase 6: Prime Video の DRM 環境下動作検証(F-13)
 
-- [ ] 再生中に pause が効く(F-13)
-- [ ] 再開時の挙動(プレイヤー UI との整合)を記録: ____
+要手動確認。Phase5と同じ手順(`npm run build` → tar.gz化 → Python HTTPサーバー →
+Windows側 netsh portproxy + ファイアウォール → Surfaceでダウンロード・展開 →
+`chrome://extensions`で読み込み)でSurface実機に転送して確認する。
+Amazon Prime Videoアカウント(Prime会員資格)での実際の作品再生が必要。
+
+- [ ] 再生中に拡張機能側から実行される`video.pause()`が実際に効く(DRM/EME
+      ストリームに対してpause()自体が問題なく動作するかの確認。F-13)
+- [ ] pause実行後、Prime Video自身のプレイヤーUI(一時停止アイコン、進行バー等)
+      が実際の再生状態(停止中)と食い違わずに表示されるか
+      — 記録: ____
+- [ ] resume実行後も同様に、プレイヤーUI(再生アイコン)が実際の再生状態(再生中)
+      と一致するか
+      — 記録: ____
+- [ ] 広告・サムネイル・ミニプレイヤー等が画面内に存在する状態でも、
+      `findPrimaryVideo()`(「可視かつ最大面積」選定)が正しく本編videoを選ぶか
+- [ ] Prime Video内でのSPA遷移(作品→別の作品、シリーズの次話など)後も、
+      メッセージ受信のたびにDOMを再クエリする設計(E-5決定事項)のままで
+      pause/resumeが機能し続けるか
+- [ ] Prime Videoの動画プレイヤーがiframe内に描画されていないか
+      (`manifest.json`の`content_scripts`は`all_frames`未指定=デフォルトで
+      トップフレームのみに注入されるため、プレイヤーがiframe内実装だと
+      video要素に到達できない可能性がある。code-reviewerレビューでの指摘事項)
+      — 記録: ____
 
 ## 設定 UI
 

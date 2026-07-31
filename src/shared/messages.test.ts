@@ -50,9 +50,6 @@ describe("isSetPlaybackResponse", () => {
     expect(isSetPlaybackResponse({ ok: false, reason: "no-video-found" })).toBe(
       true,
     );
-    expect(
-      isSetPlaybackResponse({ ok: false, reason: "unsupported-site" }),
-    ).toBe(true);
   });
 
   it("okがfalseなのにreasonが不正な値ならfalse", () => {

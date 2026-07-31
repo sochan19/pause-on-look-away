@@ -2,8 +2,10 @@
 // YouTube / Prime Video に自動注入されるcontent scriptのエントリポイント。
 // Phase 4からは、backgroundから送られてくるpause/resume指示(SET_PLAYBACK)を
 // 受け取り、実際のvideo要素に対して.pause()/.play()を実行する(F-10, F-12対応)。
-// Prime Video側のDRM検証はPhase 6で行うため、Phase4時点ではYouTube以外は
-// 制御の対象外として扱う(F-13は未対応のまま)。
+// Phase 6からは、Prime Video(DRM/EME環境)に対してもYouTubeと同じ経路で
+// pause()/play()を実行する(F-13対応)。サイトによる制御対象の分岐は行わない
+// (manifest.jsonのcontent_scripts.matchesがYouTube/Prime Videoの2サイトのみに
+// 注入を絞っているため、ここではそれ以外のサイトを考慮する必要がない)。
 
 import { onMessage } from "../shared/chrome/runtime";
 import { LOG_PREFIX } from "../shared/constants";
@@ -24,17 +26,6 @@ onMessage((message, _sender, sendResponse) => {
   // 自分宛て(SET_PLAYBACK)以外のメッセージは無視する。型ガードでない場合は
   // 何もハンドリングしないので、戻り値もfalse(=このリスナーは応答しない)でよい。
   if (!isSetPlaybackMessage(message)) {
-    return false;
-  }
-
-  // Prime VideoのDRM環境下での動作検証はPhase 6で行う。それまではYouTube以外の
-  // タブでpause/resumeを実行しない(誤ってPrime Video側のプレイヤーを操作しない)。
-  if (site !== "youtube") {
-    const response: SetPlaybackResponse = {
-      ok: false,
-      reason: "unsupported-site",
-    };
-    sendResponse(response);
     return false;
   }
 

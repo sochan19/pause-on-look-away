@@ -22,9 +22,12 @@ export interface SetPlaybackMessage {
 // content scriptからのレスポンス。
 // pause/playを実行できなかった場合にreasonを持たせることで、background側の
 // ログで「なぜ効かなかったか」に気づけるようにする。
+// (Phase6でPrime Video除外を撤去したことに伴い、"unsupported-site"は生成元が
+// 無くなったため型からも削除した。content scriptはYouTube/Prime Video以外には
+// 注入されない=manifest.jsonのcontent_scripts.matchesで保証されているため)
 export type SetPlaybackResponse =
   | { ok: true }
-  | { ok: false; reason: "no-video-found" | "unsupported-site" };
+  | { ok: false; reason: "no-video-found" };
 
 // chrome.runtime.onMessageは、拡張機能内の別コンテキスト同士でやり取りされる
 // メッセージを(自分宛てかどうかに関わらず)すべて受信してしまう。
@@ -58,11 +61,7 @@ export function isSetPlaybackResponse(
   if (candidate.ok === true) {
     return true;
   }
-  return (
-    candidate.ok === false &&
-    (candidate.reason === "no-video-found" ||
-      candidate.reason === "unsupported-site")
-  );
+  return candidate.ok === false && candidate.reason === "no-video-found";
 }
 
 // ここから下はPhase5(offscreen document)で追加したbackground⇔offscreen間の
