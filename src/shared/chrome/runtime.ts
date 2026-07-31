@@ -1,8 +1,9 @@
 // このファイルの役割:
-// chrome.runtime.* API を薄くラップする。background/content script が
+// chrome.runtime.* API を薄くラップする。background/content script/offscreen document が
 // chrome.* を直接呼ばずここ経由にするのは、テスト時にモックへ差し替えやすくするため
-// (アーキテクチャ絶対ルール2)。今はonInstalledのラップだけ用意し、
-// 必要になったAPIが増えるたびにここへ関数を足していく。
+// (アーキテクチャ絶対ルール2)。必要になったAPIが増えるたびにここへ関数を足していく。
+
+import { LOG_PREFIX } from "../constants";
 
 // chrome.runtime.onInstalled は「拡張機能が新規インストール/更新/Chrome自体の更新」
 // されたタイミングで1回だけ発火するイベント。起動確認や初期化処理のきっかけに使う。
@@ -24,4 +25,22 @@ export function onMessage(
   ) => boolean,
 ): void {
   chrome.runtime.onMessage.addListener(handler);
+}
+
+/**
+ * 拡張機能内の他のコンテキスト(background等)へメッセージを送る。
+ * offscreen documentからbackgroundへ確定状態の変化を通知する用途などに使う。
+ *
+ * background service workerがアイドルで停止していても、sendMessage()は
+ * service workerを起こしてから届ける(MV3のイベント駆動の仕組み)ため、
+ * 通常は失敗しない想定だが、受け手が存在しない等の異常時にpromiseがrejectする
+ * ことがあるため、呼び出し側で毎回try/catchしなくて済むようここでまとめて
+ * catchしログだけ出す(sendMessageToTab()と同じ考え方)。
+ */
+export async function sendMessage<TMessage>(message: TMessage): Promise<void> {
+  try {
+    await chrome.runtime.sendMessage(message);
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} sendMessage failed:`, error);
+  }
 }

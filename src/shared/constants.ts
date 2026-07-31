@@ -15,6 +15,16 @@ export const FACING_THRESHOLD_DEG = 20;
 // Phase 2では固定値。実機での体感調整(Surfaceでの手動確認)はPhase 2以降で行う。
 export const CONFIRMATION_FRAME_COUNT = 15;
 
+// offscreen documentでの顔向き検出ループを何ミリ秒間隔で回すか。
+// PoCページ(main.ts)はrequestAnimationFrame(画面のリフレッシュレート、
+// 通常60fps=約16ms間隔)で回していたが、offscreen documentは不可視のため
+// requestAnimationFrameがスロットルされる(検証済み)。そのため代わりに
+// setIntervalを使う。顔の向きは60fpsの精度で追う必要はなく、MediaPipeでの
+// 推論自体もCPU/GPU負荷が軽くないため、間隔を広げてCPU使用率を抑える(N-01)。
+// CONFIRMATION_FRAME_COUNT(15)と組み合わせると、状態確定までの遅延は
+// 約1.5秒(100ms × 15回)になる想定。
+export const DETECTION_INTERVAL_MS = 100;
+
 // 「視聴」状態に復帰した際に、自動で動画の再生を再開するかどうかのデフォルト値(F-11)。
 // 本来は設定画面(Phase7、F-21)からユーザーが切り替えられるようにする項目だが、
 // 設定画面ができるまではこの固定値がそのまま使われる。

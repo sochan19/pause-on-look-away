@@ -35,13 +35,20 @@ export default defineConfig(({ command }) => ({
   },
   build: {
     rollupOptions: {
-      // crx()はmanifest.json由来のエントリ(background/content script)を
-      // 自動でinputに設定してくれるが、それとは別に「単体HTMLのPoCページ」
-      // (index.html)もこれまで通りビルドされるように明示しておく。
-      // 明示しないと、拡張機能ビルドの設定に上書きされてPoCページがビルド対象から
-      // 外れてしまう可能性があるため(npm run buildの結果でdist/を都度確認して検証済み)。
+      // crx()はmanifest.json由来のエントリ(background/content script/popup)を
+      // 自動でinputに設定してくれるが、それ以外の2つは明示的にinputへ追加する必要がある。
+      // - index.html: 「単体HTMLのPoCページ」(main.ts)。manifest.jsonから参照されない
+      //   独立したページなので、明示しないとビルド対象から外れてしまう。
+      // - offscreen.html: chrome.offscreen.createDocument()が実行時にURLを指定して
+      //   開くページで、manifest.json上はどこからも参照されない(popup/content_scripts
+      //   と違いmanifestに書く欄が無い)。そのためcrx()もこの存在に気づけず、
+      //   明示しないとdist/にoffscreen.html自体がビルドされず実行時に404になる
+      //   (npm run buildの結果でdist/を都度確認して検証済み)。
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        offscreen: fileURLToPath(
+          new URL("./src/offscreen/offscreen.html", import.meta.url),
+        ),
       },
     },
   },
