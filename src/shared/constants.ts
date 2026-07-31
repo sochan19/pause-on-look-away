@@ -14,3 +14,9 @@ export const FACING_THRESHOLD_DEG = 20;
 // 切り替わりの反応も遅くなる。
 // Phase 2では固定値。実機での体感調整(Surfaceでの手動確認)はPhase 2以降で行う。
 export const CONFIRMATION_FRAME_COUNT = 15;
+
+// background/content scriptのconsole.logの先頭に付ける共通の目印。
+// 開発者ツールのコンソールで大量のログに混ざっても、この拡張機能が出したログだと
+// フィルタ(検索)しやすくするための文字列。background/content両方から参照するので
+// ここに置く(1箇所で書き換えられるように、直接文字列リテラルを書き散らさない)。
+export const LOG_PREFIX = "[Gaze-Aware Playback]";

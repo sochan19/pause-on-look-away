@@ -14,7 +14,16 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    // "types"を明示すると、tsconfigはここに書いたパッケージの型だけを取り込む
+    // (@types/*を入れただけでは自動で有効にならない)。
+    // "chrome": background/content scriptで使うchrome.*の型定義(@types/chrome)。
+    // "node": vite.config.tsで使うnode:url等、Node.js組み込みモジュールの型定義(@types/node)。
+    // 注意: "types"はプロジェクト全体(下のincludeの範囲)に効くため、本来Node.js専用の
+    // process/Buffer等がsrc/配下(ブラウザ/service worker上で動くコード)からも型上は
+    // 見えてしまう(実行時に存在しないのに使えてしまう可能性がある)。vite.config.tsだけ
+    // 分離するにはtsconfigを複数に分ける必要があり、初心者向けには複雑になりすぎるため、
+    // 現時点ではこのトレードオフを許容している(コードレビューで指摘済み)。
+    "types": ["vite/client", "chrome", "node"]
   },
   "include": ["src", "scripts", "vite.config.ts"]
 }

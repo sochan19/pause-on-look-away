@@ -32,6 +32,22 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 - [ ] 体感としてNフレーム(15フレーム、実機のfps次第で数百ms程度)の遅延が不自然に長すぎ
       たり短すぎたりしないか(実機での体感調整が必要ならその旨を記録)
 
+## Phase 3: Chrome拡張の骨組み(manifest / background / content script)
+
+要手動確認。`npm run build` で生成した `dist/` を `chrome://extensions` の
+「パッケージ化されていない拡張機能を読み込む」で読み込んで確認する
+(自動テストではChrome拡張としての読み込み・起動は検証できないため)。
+
+- [ ] `dist/` を読み込んでエラー(赤字の警告)が出ない
+- [ ] 拡張機能の「service worker」リンクからコンソールを開くと、
+      `[Gaze-Aware Playback] service worker starting up` と
+      `[Gaze-Aware Playback] onInstalled: reason=install` のログが出ている
+- [ ] YouTube (`youtube.com`) を開き、ページのデベロッパーツールのコンソールに
+      `[Gaze-Aware Playback] content script loaded on ...(site=youtube)` が出る
+- [ ] Prime Video (`primevideo.com` または `amazon.co.jp`) を開き、同様に
+      `(site=primevideo)` のログが出る
+- [ ] 上記以外の任意のサイトではcontent scriptが注入されない(そもそもログが出ない)
+
 ## カメラ・顔検出
 
 - [ ] 初回起動時にカメラ許可ダイアログが表示され、許可後に検出が始まる
