@@ -38,15 +38,20 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 「パッケージ化されていない拡張機能を読み込む」で読み込んで確認する
 (自動テストではChrome拡張としての読み込み・起動は検証できないため)。
 
-- [ ] `dist/` を読み込んでエラー(赤字の警告)が出ない
-- [ ] 拡張機能の「service worker」リンクからコンソールを開くと、
+- [x] `dist/` を読み込んでエラー(赤字の警告)が出ない
+      — 確認日: 2026-07-31
+- [x] 拡張機能の「service worker」リンクからコンソールを開くと、
       `[Gaze-Aware Playback] service worker starting up` と
       `[Gaze-Aware Playback] onInstalled: reason=install` のログが出ている
-- [ ] YouTube (`youtube.com`) を開き、ページのデベロッパーツールのコンソールに
+      — 確認日: 2026-07-31
+- [x] YouTube (`youtube.com`) を開き、ページのデベロッパーツールのコンソールに
       `[Gaze-Aware Playback] content script loaded on ...(site=youtube)` が出る
-- [ ] Prime Video (`primevideo.com` または `amazon.co.jp`) を開き、同様に
+      — 確認日: 2026-07-31(www.youtube.comで`site=youtube`のログを確認)
+- [x] Prime Video (`primevideo.com` または `amazon.co.jp`) を開き、同様に
       `(site=primevideo)` のログが出る
-- [ ] 上記以外の任意のサイトではcontent scriptが注入されない(そもそもログが出ない)
+      — 確認日: 2026-07-31(www.amazon.co.jpで`site=primevideo`のログを確認)
+- [x] 上記以外の任意のサイトではcontent scriptが注入されない(そもそもログが出ない)
+      — 確認日: 2026-07-31
 
 ## カメラ・顔検出
 
@@ -75,4 +80,4 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 - [ ] 一時停止発生時に視覚的通知が出る(F-22)
 
 ---
-最終確認日: 2026-07-31 / 確認者: ユーザー(Surface実機) / 対象コミット: 1239c88(Phase 1 PoCページ, HTTPS開発サーバー対応まで)
+最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 04cdc2e(Phase 3 Chrome拡張の骨組み, dist/を「パッケージ化されていない拡張機能」として読み込み・YouTube/Prime Videoでのcontent script起動確認まで)
