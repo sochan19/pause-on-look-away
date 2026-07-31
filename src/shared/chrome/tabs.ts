@@ -18,6 +18,39 @@ export async function getActiveTabId(): Promise<number | null> {
 }
 
 /**
+ * 現在アクティブなタブのURLを取得する。
+ * background側で「activeタブがカメラ判定の対象サイトか」を判定する際に使う
+ * (site-detection.tsのisCameraTargetUrl()に渡す)。
+ * URLが取得できない場合(該当タブが無い、host_permissionsが無いドメイン等)は
+ * undefinedを返す。
+ */
+export async function getActiveTabUrl(): Promise<string | undefined> {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  return tab?.url;
+}
+
+// タブの状態が変わりうるタイミング(切り替え・URL変化・削除)をまとめて監視するための
+// 薄いラッパー。呼び出し側(service-worker.ts)は「何が変わったか」の詳細を見るのではなく、
+// これらのイベントをきっかけに毎回「今のactiveタブは対象サイトか」を再計算する設計にする
+// (content scriptがSPA遷移のたびにDOMを再クエリするE-5決定事項と同じ考え方: イベントの
+// 詳細を信じてキャッシュを差分更新するより、都度re-queryする方がシンプルでズレにくい)。
+
+export function onTabActivated(handler: () => void): void {
+  chrome.tabs.onActivated.addListener(handler);
+}
+
+export function onTabUpdated(handler: () => void): void {
+  chrome.tabs.onUpdated.addListener(handler);
+}
+
+export function onTabRemoved(handler: () => void): void {
+  chrome.tabs.onRemoved.addListener(handler);
+}
+
+/**
  * 指定したタブのcontent scriptへメッセージを送る。
  *
  * content scriptが存在しないタブ(対象外サイト、まだ注入されていない、

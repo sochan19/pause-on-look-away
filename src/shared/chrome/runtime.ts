@@ -13,6 +13,14 @@ export function onInstalled(
   chrome.runtime.onInstalled.addListener(handler);
 }
 
+// chrome.runtime.onStartup は、拡張機能が既にインストールされた状態でブラウザ自体が
+// 起動した時に発火する(onInstalledとは別で、ブラウザ再起動のたびに毎回呼ばれる)。
+// service-worker.tsではこれを使い、ブラウザ起動時点で既にYouTube等のタブが
+// 開かれているケースでもカメラの起動/停止を正しく判断できるようにする。
+export function onStartup(handler: () => void): void {
+  chrome.runtime.onStartup.addListener(handler);
+}
+
 // chrome.runtime.onMessage は、拡張機能内の別コンテキスト(background⇔content script等)
 // からのメッセージを受信するイベント。ハンドラの戻り値でtrueを返すと「sendResponseを
 // 非同期に呼ぶ」ことをChromeに伝えられる仕様のため、型もそれに合わせてある

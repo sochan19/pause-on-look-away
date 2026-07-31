@@ -10,6 +10,12 @@
   "action": {
     "default_popup": "src/popup/popup.html"
   },
+  "permissions": ["offscreen"],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://*.primevideo.com/*",
+    "*://*.amazon.co.jp/*"
+  ],
   "content_scripts": [
     {
       "matches": [
