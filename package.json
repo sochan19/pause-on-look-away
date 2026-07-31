@@ -1,0 +1,26 @@
+{
+  "name": "gaze-aware-playback",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "視線(顔向き)検出でYouTube/Prime Videoを自動一時停止するChrome拡張機能",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.0"
+  }
+}

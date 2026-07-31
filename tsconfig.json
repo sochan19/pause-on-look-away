@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    // strict: true にすると、null/undefinedの取り扱いミスなどをコンパイル時に検出できる。
+    // TypeScript初心者にとっては型エラーが増えて最初は大変だが、実行時バグを事前に防げるので有効にする。
+    "strict": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    // "bundler" はVite等のバンドラ向けの解決方式。拡張子省略やpackage.jsonのexports条件を
+    // バンドラと同じルールで解決してくれるため、Viteプロジェクトではこれを使うのが推奨される。
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "scripts", "vite.config.ts"]
+}
