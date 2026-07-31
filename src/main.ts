@@ -8,15 +8,12 @@
 // 書く、という役割分担)。
 
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
-import {
-  CONFIRMATION_FRAME_COUNT,
-  FACING_THRESHOLD_DEG,
-} from "./shared/constants";
 import { requireNonNull } from "./shared/dom-utils";
 import {
   createFaceLandmarker,
   extractHeadRotation,
 } from "./shared/face-detector";
+import { DEFAULT_SETTINGS } from "./shared/settings";
 import {
   createInitialHysteresisState,
   deriveCandidateState,
@@ -136,15 +133,16 @@ function detectLoop(faceLandmarker: FaceLandmarker, stream: MediaStream): void {
     const candidate = deriveCandidateState(
       rotation !== null,
       rotation?.yawDeg ?? 0,
-      FACING_THRESHOLD_DEG,
+      DEFAULT_SETTINGS.facingThresholdDeg,
     );
 
     // 候補状態をヒステリシス状態機械に渡し、Nフレーム継続した場合のみ確定状態を切り替える
     // (まばたきや一瞬の首振りで表示がちらつかないようにするため。要件F-03)。
+    // このPoCページは拡張機能本体ではなく設定画面を持たないため、常にデフォルト値を使う。
     hysteresisState = updateHysteresisState(
       hysteresisState,
       candidate,
-      CONFIRMATION_FRAME_COUNT,
+      DEFAULT_SETTINGS.confirmationFrameCount,
     );
     const facing = hysteresisState.confirmed === "looking";
 

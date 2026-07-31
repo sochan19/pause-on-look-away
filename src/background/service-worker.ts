@@ -26,6 +26,7 @@ import {
   onStartup,
   sendMessage,
 } from "../shared/chrome/runtime";
+import { getSettings, onSettingsChanged } from "../shared/chrome/storage";
 import {
   getActiveTabId,
   getActiveTabUrl,
@@ -34,7 +35,7 @@ import {
   onTabUpdated,
   sendMessageToTab,
 } from "../shared/chrome/tabs";
-import { AUTO_RESUME_ENABLED, LOG_PREFIX } from "../shared/constants";
+import { LOG_PREFIX } from "../shared/constants";
 import {
   isCameraErrorMessage,
   isConfirmedStateChangedMessage,
@@ -64,7 +65,12 @@ onInstalled((details) => {
 async function handleConfirmedStateChange(
   state: ConfirmedState,
 ): Promise<void> {
-  const command = decidePlaybackCommand(state, AUTO_RESUME_ENABLED);
+  // service workerはアイドルでいつ終了・再起動されるかわからないため、
+  // offscreen.tsのようにモジュール変数へ設定をキャッシュせず、必要になるたびに
+  // getSettings()で都度読み直す(このファイル冒頭のコメント、および
+  // doRecomputeCameraActivation()と同じ「都度re-query」の方針)。
+  const settings = await getSettings();
+  const command = decidePlaybackCommand(state, settings.autoResumeEnabled);
   if (command === null) {
     console.log(`${LOG_PREFIX} state=${state}: 自動再開OFFのため何もしません`);
     return;
@@ -141,7 +147,10 @@ function recomputeCameraActivation(): void {
 
 async function doRecomputeCameraActivation(): Promise<void> {
   const url = await getActiveTabUrl();
-  const isTargetActive = isCameraTargetUrl(url);
+  const settings = await getSettings();
+  // 拡張機能自体が無効化されている場合(F-20、settings.enabled === false)は、
+  // activeタブが対象サイトであってもカメラを起動しない。
+  const isTargetActive = settings.enabled && isCameraTargetUrl(url);
 
   if (isTargetActive === lastKnownIsTargetActive) {
     return;
@@ -170,6 +179,12 @@ onTabRemoved(() => {
   recomputeCameraActivation();
 });
 onStartup(() => {
+  recomputeCameraActivation();
+});
+
+// optionsページから設定(特にF-20のenabled)が変更されたときも、タブの切り替えを
+// 待たずに即座にカメラ起動/停止へ反映させるための購読(手動確認項目: 設定 UI)。
+onSettingsChanged(() => {
   recomputeCameraActivation();
 });
 

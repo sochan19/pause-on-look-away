@@ -18,12 +18,8 @@
 
 import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 import { onMessage, sendMessage } from "../shared/chrome/runtime";
-import {
-  CONFIRMATION_FRAME_COUNT,
-  DETECTION_INTERVAL_MS,
-  FACING_THRESHOLD_DEG,
-  LOG_PREFIX,
-} from "../shared/constants";
+import { getSettings, onSettingsChanged } from "../shared/chrome/storage";
+import { DETECTION_INTERVAL_MS, LOG_PREFIX } from "../shared/constants";
 import { requireNonNull } from "../shared/dom-utils";
 import {
   createFaceLandmarker,
@@ -34,6 +30,7 @@ import {
   type ConfirmedStateChangedMessage,
   isOffscreenControlMessage,
 } from "../shared/messages";
+import { DEFAULT_SETTINGS, type Settings } from "../shared/settings";
 import {
   createInitialHysteresisState,
   deriveCandidateState,
@@ -66,6 +63,19 @@ let detectionIntervalId: ReturnType<typeof setInterval> | null = null;
 // STOP_CAMERA後の次のSTART_CAMERAでは初期状態からやり直す(新しい視聴セッションとして
 // 扱う。視聴対象外のタブに切り替えていた間の状態を持ち越す意味は無いため)。
 let hysteresisState = createInitialHysteresisState();
+
+// ユーザー設定(判定角度・ディレイフレーム数、Phase7・F-21)のキャッシュ。
+// offscreen documentはE-2決定によりブラウザ起動中ずっと常駐させる設計のため、
+// service worker(いつアイドルで終了されるかわからない)と違ってモジュール変数に
+// キャッシュを持たせても安全。読み込み時にgetSettings()で初期値を反映し、
+// 以後はonSettingsChanged()でoptionsページからの変更を都度反映する。
+let currentSettings: Settings = DEFAULT_SETTINGS;
+void getSettings().then((settings) => {
+  currentSettings = settings;
+});
+onSettingsChanged((settings) => {
+  currentSettings = settings;
+});
 
 // 「カメラをON/OFFどちらにしたいか」という目標状態。backgroundからの
 // START_CAMERA/STOP_CAMERAメッセージが届くたびにこれを書き換える。
@@ -256,14 +266,14 @@ function runDetectionTick(faceLandmarker: FaceLandmarker): void {
     const candidate = deriveCandidateState(
       rotation !== null,
       rotation?.yawDeg ?? 0,
-      FACING_THRESHOLD_DEG,
+      currentSettings.facingThresholdDeg,
     );
 
     const previousConfirmed = hysteresisState.confirmed;
     hysteresisState = updateHysteresisState(
       hysteresisState,
       candidate,
-      CONFIRMATION_FRAME_COUNT,
+      currentSettings.confirmationFrameCount,
     );
 
     // 確定状態が実際に変化した時だけbackgroundへ通知する。毎tick送ると
