@@ -1,13 +1,23 @@
 // このファイルの役割:
-// Phase 1 PoCページの本体。Webカメラの映像を取得し、MediaPipe Face Landmarkerで
+// Phase 1〜2 PoCページの本体。Webカメラの映像を取得し、MediaPipe Face Landmarkerで
 // リアルタイムに顔のランドマーク(特徴点)と顔の回転行列を検出する。
-// 回転行列からYaw角度を計算する部分は src/shared/head-pose.ts の純粋関数に任せ、
-// このファイルは「カメラ・DOM・MediaPipeのAPIを直接操作する」副作用のある処理だけを担当する
-// (アーキテクチャ絶対ルール1: 判定ロジックは純粋関数、それ以外はここに書く、という役割分担)。
+// 回転行列からYaw角度を計算する部分は src/shared/head-pose.ts、まばたきや一瞬の首振りで
+// 表示がちらつかないようにするNフレーム継続判定(ヒステリシス)は src/shared/viewing-state.ts
+// の純粋関数に任せ、このファイルは「カメラ・DOM・MediaPipeのAPIを直接操作する」副作用のある
+// 処理だけを担当する(アーキテクチャ絶対ルール1: 判定ロジックは純粋関数、それ以外はここに
+// 書く、という役割分担)。
 
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
-import { FACING_THRESHOLD_DEG } from "./shared/constants";
-import { computeHeadRotationDegrees, isFacingCamera } from "./shared/head-pose";
+import {
+  CONFIRMATION_FRAME_COUNT,
+  FACING_THRESHOLD_DEG,
+} from "./shared/constants";
+import { computeHeadRotationDegrees } from "./shared/head-pose";
+import {
+  createInitialHysteresisState,
+  deriveCandidateState,
+  updateHysteresisState,
+} from "./shared/viewing-state";
 
 // document.querySelector() は「見つからない可能性」を型に含む(戻り値が `T | null`)。
 // main()やdetectLoop()など別の関数から参照する際、TypeScriptは関数境界をまたいだ
@@ -47,6 +57,11 @@ const drawingUtils = new DrawingUtils(canvasCtx);
 // FaceLandmarkerはWASM/GPU側にリソースを確保しているため、作成後は
 // この変数で保持しておき、後片付け(cleanup)の際に close() できるようにする。
 let activeFaceLandmarker: FaceLandmarker | null = null;
+
+// ヒステリシス状態機械の現在状態。detectLoop()が呼ばれるたびにupdateHysteresisState()の
+// 戻り値で置き換えていく(フレームをまたいで継続カウントを覚えておく必要があるため、
+// activeFaceLandmarkerと同様にモジュールスコープの変数として保持する)。
+let hysteresisState = createInitialHysteresisState();
 
 // カメラ映像とFaceLandmarkerのリソースを後片付けする。
 // エラー発生時・ページを閉じる時に必ず呼び、カメラをつけっぱなしにしない
@@ -140,16 +155,39 @@ function detectLoop(faceLandmarker: FaceLandmarker, stream: MediaStream): void {
     }
 
     const rotationMatrix = result.facialTransformationMatrixes[0]?.data;
-    if (rotationMatrix) {
-      const { yawDeg, pitchDeg, rollDeg } =
-        computeHeadRotationDegrees(rotationMatrix);
-      const facing = isFacingCamera(yawDeg, FACING_THRESHOLD_DEG);
+    const rotation = rotationMatrix
+      ? computeHeadRotationDegrees(rotationMatrix)
+      : null;
+
+    // 1フレームごとの候補状態(looking/away)を求める。顔が検出できない場合は
+    // deriveCandidateState()内でaway扱いになる(要件F-04)。
+    // rotationがnull(顔検出できず)のときyawDegには0を渡すが、この値は
+    // hasFace=falseのとき関数内で使われないダミー値であり、意味を持たない。
+    const candidate = deriveCandidateState(
+      rotation !== null,
+      rotation?.yawDeg ?? 0,
+      FACING_THRESHOLD_DEG,
+    );
+
+    // 候補状態をヒステリシス状態機械に渡し、Nフレーム継続した場合のみ確定状態を切り替える
+    // (まばたきや一瞬の首振りで表示がちらつかないようにするため。要件F-03)。
+    hysteresisState = updateHysteresisState(
+      hysteresisState,
+      candidate,
+      CONFIRMATION_FRAME_COUNT,
+    );
+    const facing = hysteresisState.confirmed === "looking";
+
+    if (rotation) {
+      const { yawDeg, pitchDeg, rollDeg } = rotation;
       angleEl.textContent =
         `Yaw: ${yawDeg.toFixed(1)}°  Pitch: ${pitchDeg.toFixed(1)}°  Roll: ${rollDeg.toFixed(1)}°  ` +
         `— ${facing ? "視聴中" : "非視聴"}`;
     } else {
-      // 顔が検出できない(カメラ範囲外・遮蔽など)場合は「非視聴」扱いとする(要件F-04)。
-      angleEl.textContent = "顔が検出できません — 非視聴";
+      // 「顔が検出できません」なのに「視聴中」と表示されることがあるのは矛盾ではない。
+      // ヒステリシスがNフレームに達するまでは直前の確定状態(=facing)を保持し続ける仕様
+      // であり、実際に一時停止を判断する状態(confirmed)と表示を一致させるための挙動。
+      angleEl.textContent = `顔が検出できません — ${facing ? "視聴中" : "非視聴"}`;
     }
 
     canvasCtx.restore();
