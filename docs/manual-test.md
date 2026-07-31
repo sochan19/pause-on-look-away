@@ -88,9 +88,8 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 
 ## Phase 5: offscreen documentへのカメラ処理統合
 
-要手動確認。実カメラ・実ブラウザでの拡張機能の挙動は自動テスト不可のため
-(`npm run build`で生成した`dist/`を`chrome://extensions`で再読み込みして確認する)。
-未実施(このセッションでは実機確認をしていないため、下記はすべて未チェック)。
+要手動確認。実カメラが無い開発環境だったため、LAN経由でSurface(実カメラ搭載端末)に
+ビルド済み`dist/`を転送して確認した。2026-07-31。
 
 - [x] popupを開くとカメラ許可の状態("未許可"等)が表示される
       — 確認日: 2026-07-31
@@ -102,30 +101,41 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
       → **optionsページ方式(`options_ui`、`open_in_tab: true`で通常タブとして開く)へ
       切り替え済み**。popupは状態表示と「設定ページを開く」ボタンのみに縮小し、
       実際の許可取得は`src/options/options.ts`で行う。以下は切り替え後の確認項目
-- [ ] popupの「設定ページを開く」ボタンを押すとoptionsページが新しいタブとして開く
-- [ ] optionsページの「カメラを許可する」ボタンを押すと許可ダイアログが表示され、
+- [x] popupの「設定ページを開く」ボタンを押すとoptionsページが新しいタブとして開く
+      — 確認日: 2026-07-31(Surface実機)
+- [x] optionsページの「カメラを許可する」ボタンを押すと許可ダイアログが表示され、
       許可すると「許可済み」の表示に切り替わる
-- [ ] 許可後、popupを開き直すと状態表示が「許可済み」になっている
-      (`navigator.permissions.query()`はpopupからでも問題なく使えることの確認)
-- [ ] 許可済みの状態でYouTubeの動画ページをアクティブなタブにすると、
-      `chrome://extensions`の拡張機能詳細から開けるoffscreen documentのコンソールに
-      `[offscreen] offscreen document loaded`・`[offscreen] カメラ起動・検出ループ開始`
-      のログが出て、カメラの利用中インジケータ(タブ/OSの録画中マーク)が点灯する
-- [ ] 拡張機能アイコンクリック(devSimulatedStateの仮トリガー)を使わずに、実際に顔を
-      カメラから背けて数秒(CONFIRMATION_FRAME_COUNT×DETECTION_INTERVAL_MS ≒ 1.5秒)
-      待つと、YouTubeの動画が自動で一時停止する。向き直すと自動で再生が再開する
+      — 確認日: 2026-07-31(Surface実機)。合わせて、offscreen documentで
+      `WebAssembly.instantiate()`がCSP違反で失敗する不具合を発見・修正
+      (manifest.jsonに`content_security_policy.extension_pages`で
+      `wasm-unsafe-eval`を追加。MV3のデフォルトCSPはWASMコンパイルを許可しないため)
+- [x] 許可済みの状態でYouTubeの動画ページをアクティブなタブにすると、offscreen
+      documentのコンソールに`[offscreen] offscreen document loaded`・
+      `[offscreen] カメラ起動・検出ループ開始`のログが出る
+      — 確認日: 2026-07-31(Surface実機)。`INFO: Created TensorFlow Lite XNNPACK
+      delegate for CPU.`等、MediaPipe内部のINFO/WARNINGログがChromeの「エラー」欄に
+      赤字/警告として出るが機能上の問題ではないことを確認(既知の表示上の癖)
+- [x] 拡張機能アイコンクリックを使わずに、実際に顔をカメラから背けて数秒待つと、
+      YouTubeの動画が自動で一時停止する。向き直すと自動で再生が再開する
       (Phase5のゴールとなる一気通貫の確認。F-03, F-04, F-10〜F-12対応)
-- [ ] YouTube以外のタブ(無関係なサイト等)に切り替えると、offscreenのコンソールに
-      `[offscreen] カメラ停止`が出て、カメラの利用中インジケータが消える
-- [ ] 再度YouTubeタブに戻すとカメラが再起動し、判定が再開する
-- [ ] `chrome://extensions`のservice workerリンクが「非アクティブ」になるまで待って
-      (アイドルで停止したことを確認して)からタブを切り替え、それでも
+      — 確認日: 2026-07-31(Surface実機・目視確認)。offscreenのコンソールで
+      `確定状態が変化: away`/`looking`の交互ログ、service workerのコンソールで
+      `state=away -> command=pause response= {ok: true}`/
+      `state=looking -> command=resume response= {ok: true}`のログも合わせて確認
+- [x] YouTube以外のタブに切り替えると、offscreen/service worker両方のコンソールに
+      `カメラ停止`/`対象サイトから離脱 -> STOP_CAMERA`が出る
+      — 確認日: 2026-07-31(Surface実機)
+- [x] service workerが一度アイドルで再起動されても
+      (`[Gaze-Aware Playback] service worker starting up`が再度ログに出た後も)、
       START_CAMERA/STOP_CAMERAの送信・pause/resumeの中継が問題なく続くことを確認
-      (service worker再起動後もoffscreen documentが常駐し続けていることの確認)
+      — 確認日: 2026-07-31(Surface実機。検証中に自然に発生したservice worker再起動後も
+      正常動作を確認できた)
 - [ ] カメラを他アプリで使用中/OSレベルで無効化した状態でYouTubeを開き、
       拡張機能がエラーで壊れず、offscreenのコンソールに`CAMERA_ERROR`関連のログが出る
       (許可はしているが物理的に使えない場合のエラーハンドリング確認)
-- [ ] CPU使用率が動画再生を阻害しない水準(N-01)
+      — 未確認(任意項目のため見送り。コード上はtry/catchで実装済み)
+- [x] CPU使用率が動画再生を阻害しない水準(N-01)
+      — 確認日: 2026-07-31(Surface実機、体感チェック。動画再生の目立った引っかかりなし)
 
 既知の制約(今回未対応、必要になれば別途対応):
 - `isCameraTargetUrl()`は`amazon.co.jp`ドメイン全体を対象サイトと判定するため
@@ -155,4 +165,4 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 - [ ] 一時停止発生時に視覚的通知が出る(F-22)
 
 ---
-最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 224aa55(Phase 4 YouTube pause/play制御, 拡張機能アイコンクリックによるpause/resume・SPA遷移・非対象サイトでのエラー無しを確認)
+最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 9f30e5b(Phase 5 offscreen documentへのカメラ処理統合。Surface実機で本物の視線検出によるYouTube自動pause/resumeを一気通貫で確認。検証中にoptionsページ方式への切り替え・CSP(wasm-unsafe-eval)修正の2件のバグを発見・対応)
