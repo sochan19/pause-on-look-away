@@ -2,6 +2,10 @@
 node_modules/
 dist/
 
+# MediaPipeのwasm/モデルファイル(scripts/fetch-mediapipe-assets.mjs で生成する暫定運用。
+# 最終的な同梱方針はDECISIONS.md A-8でPhase 5に検討予定)
+public/mediapipe/
+
 # OS / エディタ
 .DS_Store
 Thumbs.db

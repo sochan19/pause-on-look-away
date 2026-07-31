@@ -21,7 +21,17 @@ Claude Code のセッション内で以下を実行(D-4で決定):
 
 これにより、code-reviewer サブエージェント(プロジェクト固有ルール担当)に加えて、一般的なセキュリティ観点(機密情報の扱い等)も自動チェックされるようになる。
 
-## 3. プロジェクト初期化を Claude Code に依頼
+## 3. 依存パッケージのインストール
+
+```bash
+npm install
+```
+
+`npm install` 完了後、`postinstall` スクリプトが自動実行され、MediaPipeのwasm/顔検出モデルが
+`public/mediapipe/` にダウンロードされる(サイズが大きいためgit管理はしていない)。
+手動で再取得したい場合は `npm run assets:fetch` を実行する。
+
+## 4. プロジェクト初期化を Claude Code に依頼
 
 以下のような指示で開始する:
 
