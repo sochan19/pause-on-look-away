@@ -4,10 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gaze-Aware Playback — 顔向き検出 PoC</title>
+    <style>
+      /* video と canvas を同じ位置に重ねて表示するための最小限のスタイル。
+         canvas はランドマーク(顔の特徴点)を描画するための透明なレイヤー。 */
+      #camera-container {
+        position: relative;
+        width: 640px;
+        max-width: 100%;
+      }
+      #camera-preview,
+      #landmarks-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+      }
+    </style>
   </head>
   <body>
     <h1>Gaze-Aware Playback — 顔向き検出 PoC</h1>
     <p id="status">読み込み中...</p>
+    <p id="angles">-</p>
+    <div id="camera-container">
+      <video id="camera-preview" autoplay playsinline muted></video>
+      <canvas id="landmarks-overlay"></canvas>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
