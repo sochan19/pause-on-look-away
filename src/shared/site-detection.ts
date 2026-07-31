@@ -32,3 +32,29 @@ export function identifySite(hostname: string): Site {
   }
   return "unknown";
 }
+
+/**
+ * タブのURL(chrome.tabs.Tab.url相当)が、カメラ判定を行うべき対象サイト
+ * (YouTube / Prime Video)かどうかを判定する。
+ *
+ * background(service worker)がタブ切り替え・URL変化のたびに呼び、
+ * offscreen documentへカメラの開始/停止を指示するかどうかの判断に使う
+ * (DECISIONS.md E-2: activeタブが対象サイトの間だけカメラを起動する設計)。
+ *
+ * urlはchrome拡張のタブAPIの型上`string | undefined`(新規タブページ等、
+ * 権限がなくURLを読めない場合がある)であり、`chrome://`のような
+ * `URL`でパースできてもhostnameを持たない値も来うるため、例外を投げずに
+ * falseへ倒す。
+ */
+export function isCameraTargetUrl(url: string | undefined): boolean {
+  if (url === undefined) {
+    return false;
+  }
+  try {
+    const hostname = new URL(url).hostname;
+    return identifySite(hostname) !== "unknown";
+  } catch {
+    // 不正なURL文字列(パース失敗)は対象外として扱う。
+    return false;
+  }
+}
