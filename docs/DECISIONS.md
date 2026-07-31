@@ -14,7 +14,7 @@
 | A-5 | E2E | ✅ **Playwright(後続フェーズ)** | Chromeのフェイクカメラ機能で顔向き判定のE2Eも自動化可能。Phase 4以降で導入判断 |
 | A-6 | Lint / Format | ✅ **Biome** | ESLint+Prettierより設定が1ファイルで済む |
 | A-7 | Node / パッケージ管理 | ✅ **Node 20+ / npm** | 標準構成 |
-| A-8 | MediaPipeモデルの同梱方法 | 保留 | リポジトリ直接同梱 か postinstallでダウンロードか。Phase 5で検討 |
+| A-8 | MediaPipeモデルの同梱方法 | ✅ **postinstallでダウンロード** | `scripts/fetch-mediapipe-assets.mjs`が`npm install`時に自動取得し`public/mediapipe/`に配置(サイズが大きくnode_modules由来の生成物のため`.gitignore`対象。Phase1時点で実装済み) |
 
 ## B. Git 運用
 
@@ -24,7 +24,7 @@
 | B-2 | コミット粒度 | ✅ 1コミット = 1論理的変更(フェーズ丸ごと禁止) |
 | B-3 | ブランチ戦略 | ✅ **ブランチを作らず常に `main` で作業**(初めてのプロジェクトのため運用をシンプルに) |
 | B-4 | pushの扱い | ✅ **commit後、確認なしで自動push**。force pushのみ禁止 |
-| B-5 | dist/等の扱い | 保留 | .gitignore対象。A-8と連動して決める |
+| B-5 | dist/等の扱い | ✅ **.gitignore対象**(A-8のpublic/mediapipe/と同様、生成物はcommitしない) |
 | B-6 | バージョニング | 保留 | manifest.jsonのversionをsemverで管理。タグ付けは手動(当面不要) |
 
 ## C. 「commit してよい」の定義(Definition of Done)
@@ -57,8 +57,23 @@
 
 **これは「今チャットで決めるもの」ではなく、実装時にClaude Codeが調査・PoCを行い、選択肢を提示してから確定する項目です。** 該当Phaseに来るまでは何もしなくて問題ありません。
 
-1. **カメラ許可フロー**: offscreen documentは不可視のためgetUserMediaの許可ダイアログを自力で出せない可能性が高い。「初回のみoptionsページ(可視ページ)で許可を取得→以後offscreenで利用」を第一候補としてPhase 5で検証
-2. **offscreen documentのライフサイクル**: service workerはアイドルで終了する。offscreen(reason: USER_MEDIA)を常駐させる設計と、視聴していない時にカメラを止める省電力設計の両立方法
+1. **カメラ許可フロー**: ✅ **拡張機能アイコンのpopupで初回許可を取得**することに決定
+   (Phase5)。offscreen documentは不可視のためgetUserMediaの許可ダイアログを自力で
+   出せないことをWeb検索(Chrome公式ドキュメント・GoogleChrome社のissue)で確認済み。
+   popup内でのボタンクリック(ユーザー操作)を契機にgetUserMedia()を呼び、許可されれば
+   その場でトラックを止める(許可を得ることだけが目的)。以後は同一オリジン
+   (`chrome-extension://<id>`)なのでoffscreen documentからの呼び出しは許可ダイアログ
+   なしで成功する。popupはフォーカスを失うと自動的に閉じる仕様のため、許可ダイアログ
+   表示中にpopupが閉じてしまうリスクは実機検証が必要(`docs/manual-test.md`参照)。
+   問題があればoptionsページ方式へ切り替える
+2. **offscreen documentのライフサイクル**: ✅ **offscreen documentは常駐させ続け、
+   カメラストリーム(getUserMedia)の開始/停止だけをactiveタブが
+   YouTube/Prime Videoかどうかに連動させる**ことに決定(Phase5)。MediaPipeモデルの
+   再読み込みコストを避けつつ、視聴対象外のタブではカメラを物理的に止められる
+   (録画中インジケータも消える)。`src/background/service-worker.ts`の
+   `recomputeCameraActivation()`がタブの切り替え・URL変化・ブラウザ起動のたびに
+   再計算し、`src/offscreen/offscreen.ts`の`reconcileCameraState()`が目標状態と
+   実際の状態を一致させ続ける
 3. **Prime VideoのDRM**: video.pause()自体はDRMの影響を受けない見込みだが、プレイヤーUIとの整合(再開時の挙動)は実機検証(Phase 6)
 4. **対象videoの特定**: ✅ **「可視 かつ 最大面積」で選定**(Phase4で決定)。`src/shared/video-selection.ts`の`selectPrimaryVideoIndex()`で実装。「再生中かどうか」を条件にしないのは、この拡張機能自身がpause()を呼んだ直後は対象videoが一時停止中になり、resume時に同じ基準で再選択できなくなる問題を避けるため
 5. **YouTube SPA遷移**: ✅ **専用の監視の仕組み(MutationObserver/`yt-navigate-finish`)は導入しない**(Phase4で決定)。content scriptがbackgroundからのメッセージを受け取るたびに`findPrimaryVideo()`でDOMを再クエリする設計にすることで、キャッシュを持たないためSPA遷移が自然に無害化される。将来「video要素の有無を能動的に監視する」要件が出てきたら再検討する
