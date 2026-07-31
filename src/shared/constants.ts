@@ -15,6 +15,13 @@ export const FACING_THRESHOLD_DEG = 20;
 // Phase 2では固定値。実機での体感調整(Surfaceでの手動確認)はPhase 2以降で行う。
 export const CONFIRMATION_FRAME_COUNT = 15;
 
+// 「視聴」状態に復帰した際に、自動で動画の再生を再開するかどうかのデフォルト値(F-11)。
+// 本来は設定画面(Phase7、F-21)からユーザーが切り替えられるようにする項目だが、
+// 設定画面ができるまではこの固定値がそのまま使われる。
+// true = 自動再開する。Phase7で設定機能を実装する際は、このtrueをデフォルト値として使う想定
+// (docs/DECISIONS.md E章で「自動再開ON固定」として決定済み)。
+export const AUTO_RESUME_ENABLED = true;
+
 // background/content scriptのconsole.logの先頭に付ける共通の目印。
 // 開発者ツールのコンソールで大量のログに混ざっても、この拡張機能が出したログだと
 // フィルタ(検索)しやすくするための文字列。background/content両方から参照するので
