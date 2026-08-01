@@ -25,8 +25,16 @@ export interface SetPlaybackMessage {
 // (Phase6でPrime Video除外を撤去したことに伴い、"unsupported-site"は生成元が
 // 無くなったため型からも削除した。content scriptはYouTube/Prime Video以外には
 // 注入されない=manifest.jsonのcontent_scripts.matchesで保証されているため)
+//
+// alreadyInState: 「そのpause/resume命令を実行する前から、video要素が既に
+// 目的の状態だったか」を表す(pauseなら実行前からpaused、resumeなら実行前から
+// 再生中だった場合にtrue)。background側がF-11(自動再開)を正しく判断するために
+// 必要な情報: 「拡張機能自身がpauseさせて再生中→一時停止という状態変化を
+// 実際に起こした動画」と「ユーザーが自分の意思で既に一時停止していた動画」を
+// 区別できないと、視線が戻っただけでユーザーが手動で止めた動画まで勝手に
+// 再生してしまうバグになる(実機検証で発見)。
 export type SetPlaybackResponse =
-  | { ok: true }
+  | { ok: true; alreadyInState: boolean }
   | { ok: false; reason: "no-video-found" };
 
 // chrome.runtime.onMessageは、拡張機能内の別コンテキスト同士でやり取りされる
@@ -57,9 +65,13 @@ export function isSetPlaybackResponse(
   if (typeof response !== "object" || response === null) {
     return false;
   }
-  const candidate = response as { ok?: unknown; reason?: unknown };
+  const candidate = response as {
+    ok?: unknown;
+    reason?: unknown;
+    alreadyInState?: unknown;
+  };
   if (candidate.ok === true) {
-    return true;
+    return typeof candidate.alreadyInState === "boolean";
   }
   return candidate.ok === false && candidate.reason === "no-video-found";
 }

@@ -84,3 +84,80 @@ export function onSettingsChanged(handler: (settings: Settings) => void): void {
     );
   }
 }
+
+// ここから下は、視線復帰時の自動再開(F-11)を正しく判定するための、
+// タブごとの一時的な状態をchrome.storage.sessionに保存する関数。
+//
+// なぜ chrome.storage.sync ではなく session なのか:
+// この値(「今一時停止しているのはユーザー操作ではなく拡張機能自身か」)は、
+// 端末をまたいで同期したいユーザー設定ではなく、あくまで今のブラウザセッション
+// 限りの内部状態。service-worker.tsのモジュール変数(let)で持たない理由は、
+// MV3のservice workerがアイドルで頻繁に終了・再起動されるため
+// (このプロジェクトの他の場所にもある注釈と同じ理由)。ただし今回はモジュール変数の
+// 「消えても次のイベントで再計算すればよい」という前提が当てはまらない
+// (「拡張機能が一時停止させた」という事実は、後から再計算しようがないため)。
+// chrome.storage.sessionはservice worker再起動をまたいで値を保持しつつ、
+// ブラウザを閉じれば消える(sync/localと違いディスクに書き込まれない)ため、
+// この用途に合っている。
+//
+// なぜタブIDをキーにするのか:
+// この状態はタブ単位で意味を持つ(あるタブで拡張機能が一時停止させた動画を、
+// 別のタブをresumeする際に誤って参照しないようにするため)。
+
+const PAUSED_BY_EXTENSION_KEY_PREFIX = "pausedByExtension:";
+
+/**
+ * 指定したタブについて、「今一時停止しているのは拡張機能自身か」を読み込む。
+ * まだ記録が無い場合(初回、または既にfalseとして削除済み)はfalseを返す。
+ */
+export async function getPausedByExtension(tabId: number): Promise<boolean> {
+  const key = `${PAUSED_BY_EXTENSION_KEY_PREFIX}${tabId}`;
+  try {
+    const result = await chrome.storage.session.get(key);
+    return result[key] === true;
+  } catch (error) {
+    // getSettings()と同じく、失敗時は安全側(=自動再開しない)のfalseにフォールバックする。
+    console.warn(
+      `${LOG_PREFIX} getPausedByExtension failed. falseとして扱います:`,
+      error,
+    );
+    return false;
+  }
+}
+
+/**
+ * 指定したタブについて、「今一時停止しているのは拡張機能自身か」を保存する。
+ * falseを保存する代わりにキー自体を削除する。タブを開閉するたびにキーが
+ * 積み上がり続けるのを防ぐため(falseは「記録が無い」ときのデフォルト値と
+ * 同じ意味なので、明示的に保存しておく必要が無い)。
+ *
+ * saveSettings()と違い、ここではあえて内部でcatchする。saveSettings()は
+ * ユーザー操作(options.tsのボタン等)を起点に呼ばれ、失敗をUIへ
+ * 「保存に失敗しました」と表示できる文脈だが、この関数はservice-worker.ts内部の
+ * バックグラウンド処理から呼ばれ、失敗をユーザーへ見せる手段が無い。そのため
+ * getSettings()と同じ「ここでまとめてcatchし、ログだけ出す」方針にする。
+ */
+export async function setPausedByExtension(
+  tabId: number,
+  pausedByExtension: boolean,
+): Promise<void> {
+  const key = `${PAUSED_BY_EXTENSION_KEY_PREFIX}${tabId}`;
+  try {
+    if (pausedByExtension) {
+      await chrome.storage.session.set({ [key]: true });
+    } else {
+      await chrome.storage.session.remove(key);
+    }
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} setPausedByExtension failed:`, error);
+  }
+}
+
+/**
+ * タブが閉じられたときに、そのタブ用のpausedByExtensionの記録を掃除する。
+ * 呼ばなくても動作上の実害は無い(未使用キーが残るだけ)が、長時間の利用で
+ * chrome.storage.sessionにタブID分のキーが積み上がり続けるのを避けるための後片付け。
+ */
+export async function clearPausedByExtension(tabId: number): Promise<void> {
+  await setPausedByExtension(tabId, false);
+}

@@ -43,6 +43,13 @@ onMessage((message, _sender, sendResponse) => {
     return false;
   }
 
+  // 実行前の状態を覚えておく。「そのpause/resumeが実際に状態を変えたか」を
+  // background側へ伝えるため(messages.tsのSetPlaybackResponseのコメント参照。
+  // ユーザーが手動で一時停止した動画を、視線が戻っただけで勝手に再生してしまう
+  // バグを防ぐために必要な情報)。
+  const alreadyInState =
+    message.command === "pause" ? video.paused : !video.paused;
+
   if (message.command === "pause") {
     video.pause();
   } else {
@@ -51,7 +58,7 @@ onMessage((message, _sender, sendResponse) => {
     video.play();
   }
 
-  const response: SetPlaybackResponse = { ok: true };
+  const response: SetPlaybackResponse = { ok: true, alreadyInState };
   sendResponse(response);
   return false;
 });

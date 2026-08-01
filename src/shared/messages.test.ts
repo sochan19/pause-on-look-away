@@ -42,8 +42,20 @@ describe("isSetPlaybackMessage", () => {
 });
 
 describe("isSetPlaybackResponse", () => {
-  it("{ ok: true }はtrue", () => {
-    expect(isSetPlaybackResponse({ ok: true })).toBe(true);
+  it("alreadyInStateを持つ{ ok: true }はtrue", () => {
+    expect(isSetPlaybackResponse({ ok: true, alreadyInState: true })).toBe(
+      true,
+    );
+    expect(isSetPlaybackResponse({ ok: true, alreadyInState: false })).toBe(
+      true,
+    );
+  });
+
+  it("okがtrueなのにalreadyInStateが欠けている/型が違う場合はfalse", () => {
+    expect(isSetPlaybackResponse({ ok: true })).toBe(false);
+    expect(isSetPlaybackResponse({ ok: true, alreadyInState: "true" })).toBe(
+      false,
+    );
   });
 
   it("正しいreasonを持つ{ ok: false }はtrue", () => {

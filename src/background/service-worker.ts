@@ -26,7 +26,13 @@ import {
   onStartup,
   sendMessage,
 } from "../shared/chrome/runtime";
-import { getSettings, onSettingsChanged } from "../shared/chrome/storage";
+import {
+  clearPausedByExtension,
+  getPausedByExtension,
+  getSettings,
+  onSettingsChanged,
+  setPausedByExtension,
+} from "../shared/chrome/storage";
 import {
   getActiveTabId,
   getActiveTabUrl,
@@ -44,7 +50,10 @@ import {
   type SetPlaybackMessage,
   type SetPlaybackResponse,
 } from "../shared/messages";
-import { decidePlaybackCommand } from "../shared/playback-policy";
+import {
+  decidePlaybackCommand,
+  nextPausedByExtension,
+} from "../shared/playback-policy";
 import { isCameraTargetUrl } from "../shared/site-detection";
 import type { ConfirmedState } from "../shared/viewing-state";
 
@@ -55,31 +64,65 @@ onInstalled((details) => {
   recomputeCameraActivation();
 });
 
+// handleConfirmedStateChange()の呼び出しを直列化する(1つずつ順番に処理する)ための
+// Promiseチェーン。recomputeQueue(下記)と同じ考え方: 短時間に複数の
+// CONFIRMED_STATE_CHANGEDが連続すると、「pausedByExtensionを読む」→「pause/resumeを
+// 送る」→「pausedByExtensionを書く」の間に次の呼び出しが割り込み、古い呼び出しの
+// 結果で新しい呼び出しの結果を上書きしてしまう競合(TOCTOU)が起こりうるため。
+let handleStateChangeQueue: Promise<void> = Promise.resolve();
+
 /**
  * 視聴状態(ConfirmedState)の変化を受け取り、必要ならアクティブタブへ
  * pause/resumeメッセージを送る。
  *
  * offscreen document(カメラ判定・ヒステリシス状態機械)の確定状態が変わるたびに
  * CONFIRMED_STATE_CHANGEDメッセージ経由で呼ばれる中継ロジック本体。
+ * この関数自体は同期関数にしてあり、実際の処理はhandleStateChangeQueueに
+ * 追加されるだけ(recomputeCameraActivation()と同じパターン)。
  */
-async function handleConfirmedStateChange(
+function handleConfirmedStateChange(state: ConfirmedState): void {
+  handleStateChangeQueue = handleStateChangeQueue
+    .then(() => doHandleConfirmedStateChange(state))
+    .catch((error) => {
+      console.error(`${LOG_PREFIX} handleConfirmedStateChangeに失敗:`, error);
+    });
+}
+
+async function doHandleConfirmedStateChange(
   state: ConfirmedState,
 ): Promise<void> {
-  // service workerはアイドルでいつ終了・再起動されるかわからないため、
-  // offscreen.tsのようにモジュール変数へ設定をキャッシュせず、必要になるたびに
-  // getSettings()で都度読み直す(このファイル冒頭のコメント、および
-  // doRecomputeCameraActivation()と同じ「都度re-query」の方針)。
-  const settings = await getSettings();
-  const command = decidePlaybackCommand(state, settings.autoResumeEnabled);
-  if (command === null) {
-    console.log(`${LOG_PREFIX} state=${state}: 自動再開OFFのため何もしません`);
-    return;
-  }
-
   const tabId = await getActiveTabId();
   if (tabId === null) {
     console.warn(
       `${LOG_PREFIX} handleConfirmedStateChange: アクティブなタブが見つかりません`,
+    );
+    return;
+  }
+
+  // service workerはアイドルでいつ終了・再起動されるかわからないため、
+  // offscreen.tsのようにモジュール変数へキャッシュせず、必要になるたびに
+  // getSettings()/getPausedByExtension()で都度読み直す(このファイル冒頭の
+  // コメント、およびdoRecomputeCameraActivation()と同じ「都度re-query」の方針)。
+  // pausedByExtensionは「拡張機能が一時停止させた動画かどうか」というタブ単位の
+  // 状態で、chrome.storage.session(service worker再起動をまたいで保持され、
+  // ブラウザを閉じれば消える)にtabIdをキーとして保存している
+  // (src/shared/chrome/storage.tsのコメント参照。実機検証で見つかった
+  // 「よそ見が長引いてservice workerが再起動すると、拡張機能自身が一時停止させた
+  // 動画すら自動再開されなくなる」問題への対応。モジュール変数のままだと
+  // 再起動でリセットされてしまうため永続化が必要だった)。
+  const [settings, pausedByExtension] = await Promise.all([
+    getSettings(),
+    getPausedByExtension(tabId),
+  ]);
+  const command = decidePlaybackCommand(
+    state,
+    settings.autoResumeEnabled,
+    pausedByExtension,
+  );
+  if (command === null) {
+    console.log(
+      `${LOG_PREFIX} state=${state}: 何もしません(自動再開OFF、または拡張機能が` +
+        "一時停止させた動画ではないため)",
     );
     return;
   }
@@ -100,6 +143,16 @@ async function handleConfirmedStateChange(
       response,
     );
     return;
+  }
+
+  // pausedByExtensionを更新する。実際に成功した(response.ok === true)場合のみ
+  // 更新し、失敗(no-video-found等)やタブが見つからない(response === null)場合は
+  // 状態を変えない(「実際に何が起きたか分からない」まま推測で書き換えないため)。
+  if (response?.ok) {
+    await setPausedByExtension(
+      tabId,
+      nextPausedByExtension(command, response.alreadyInState),
+    );
   }
 
   console.log(
@@ -175,8 +228,11 @@ onTabActivated(() => {
 onTabUpdated(() => {
   recomputeCameraActivation();
 });
-onTabRemoved(() => {
+onTabRemoved((tabId) => {
   recomputeCameraActivation();
+  // 閉じたタブ用に保存していたpausedByExtensionの記録を後片付けする
+  // (src/shared/chrome/storage.tsのclearPausedByExtension()コメント参照)。
+  void clearPausedByExtension(tabId);
 });
 onStartup(() => {
   recomputeCameraActivation();
@@ -193,7 +249,7 @@ onSettingsChanged(() => {
 // 受信してしまうため、型ガードで自分が処理すべき形かどうかを確認してから処理する。
 onMessage((message, _sender, _sendResponse) => {
   if (isConfirmedStateChangedMessage(message)) {
-    void handleConfirmedStateChange(message.state);
+    handleConfirmedStateChange(message.state);
     return false;
   }
   if (isCameraErrorMessage(message)) {

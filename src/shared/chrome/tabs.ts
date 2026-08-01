@@ -46,8 +46,11 @@ export function onTabUpdated(handler: () => void): void {
   chrome.tabs.onUpdated.addListener(handler);
 }
 
-export function onTabRemoved(handler: () => void): void {
-  chrome.tabs.onRemoved.addListener(handler);
+// タブが閉じられたときのtabIdを呼び出し側へ渡す。service-worker.tsはこれを
+// 「対象サイトの再計算」だけでなく、そのタブ用に保存していたpausedByExtension
+// (自動再開の判定に使う状態、F-11)の後片付けにも使う。
+export function onTabRemoved(handler: (tabId: number) => void): void {
+  chrome.tabs.onRemoved.addListener((tabId) => handler(tabId));
 }
 
 /**
