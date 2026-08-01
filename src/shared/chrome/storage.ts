@@ -56,14 +56,31 @@ export async function saveSettings(partial: Partial<Settings>): Promise<void> {
  * SPA遷移のたびにDOMを再クエリするのと同じ「都度re-queryする」考え方。
  * DECISIONS.md E-5決定事項を参照)。areaNameが"sync"以外("local"等)の変化は
  * このプロジェクトでは使っていないため無視する。
+ *
+ * この関数はoffscreen.ts/service-worker.tsのモジュール読み込み時(トップレベル)
+ * から呼ばれる。実機検証で、offscreen documentが作られた直後のタイミングでは
+ * 稀に chrome.storage 自体がまだ undefined になっていることが確認された
+ * (Chrome側の権限バインディングの反映タイミングによる一時的な状態と見られる)。
+ * ここでtry/catchせずに例外を投げてしまうと、呼び出し元のモジュール全体の
+ * 読み込みがそこで止まり、その後に書かれているonMessage()の登録(カメラの
+ * START_CAMERA/STOP_CAMERA受信という中核機能)まで巻き込んで動かなくなって
+ * しまう。「設定の自動反映」という副次的な機能の初期化失敗が、動画一時停止
+ * という主機能を道連れにしないよう、ここで確実に失敗を吸収する。
  */
 export function onSettingsChanged(handler: (settings: Settings) => void): void {
-  chrome.storage.onChanged.addListener((_changes, areaName) => {
-    if (areaName !== "sync") {
-      return;
-    }
-    // getSettings()は内部でエラーを握りつぶしデフォルト値にフォールバックするため
-    // (上記参照)、ここで改めてcatchする必要はない。
-    void getSettings().then(handler);
-  });
+  try {
+    chrome.storage.onChanged.addListener((_changes, areaName) => {
+      if (areaName !== "sync") {
+        return;
+      }
+      // getSettings()は内部でエラーを握りつぶしデフォルト値にフォールバックするため
+      // (上記参照)、ここで改めてcatchする必要はない。
+      void getSettings().then(handler);
+    });
+  } catch (error) {
+    console.warn(
+      `${LOG_PREFIX} onSettingsChanged: リスナー登録に失敗しました。設定の自動反映は無効になります:`,
+      error,
+    );
+  }
 }
