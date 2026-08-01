@@ -1,10 +1,10 @@
-# 要件定義書 — Gaze-Aware Playback (仮称)
+# 要件定義書 — GazePause
 
 ## 1. 概要
 
 | 項目 | 内容 |
 |---|---|
-| プロジェクト名 | Gaze-Aware Playback(仮) |
+| プロジェクト名 | GazePause |
 | 種別 | Chrome拡張機能 |
 | 目的 | ユーザーがテレビ(画面)から視線を外した際、再生中の動画を自動で一時停止する |
 | 対象サイト | YouTube, Amazon Prime Video |

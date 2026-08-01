@@ -43,7 +43,7 @@ async function refreshPermissionStatus(): Promise<void> {
       "設定ページから許可してください。",
     );
   } catch (error) {
-    console.warn("[Gaze-Aware Playback] カメラ許可状態の確認に失敗:", error);
+    console.warn("[GazePause] カメラ許可状態の確認に失敗:", error);
     statusEl.textContent = "カメラ許可の状態を確認できませんでした。";
   }
 }

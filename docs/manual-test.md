@@ -41,11 +41,11 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
 - [x] `dist/` を読み込んでエラー(赤字の警告)が出ない
       — 確認日: 2026-07-31
 - [x] 拡張機能の「service worker」リンクからコンソールを開くと、
-      `[Gaze-Aware Playback] service worker starting up` と
-      `[Gaze-Aware Playback] onInstalled: reason=install` のログが出ている
+      `[GazePause] service worker starting up` と
+      `[GazePause] onInstalled: reason=install` のログが出ている
       — 確認日: 2026-07-31
 - [x] YouTube (`youtube.com`) を開き、ページのデベロッパーツールのコンソールに
-      `[Gaze-Aware Playback] content script loaded on ...(site=youtube)` が出る
+      `[GazePause] content script loaded on ...(site=youtube)` が出る
       — 確認日: 2026-07-31(www.youtube.comで`site=youtube`のログを確認)
 - [x] Prime Video (`primevideo.com` または `amazon.co.jp`) を開き、同様に
       `(site=primevideo)` のログが出る
@@ -129,7 +129,7 @@ Surface(実カメラ搭載端末、LAN経由でHTTPS開発サーバーに接続)
       `カメラ停止`/`対象サイトから離脱 -> STOP_CAMERA`が出る
       — 確認日: 2026-07-31(Surface実機)
 - [x] service workerが一度アイドルで再起動されても
-      (`[Gaze-Aware Playback] service worker starting up`が再度ログに出た後も)、
+      (`[GazePause] service worker starting up`が再度ログに出た後も)、
       START_CAMERA/STOP_CAMERAの送信・pause/resumeの中継が問題なく続くことを確認
       — 確認日: 2026-07-31(Surface実機。検証中に自然に発生したservice worker再起動後も
       正常動作を確認できた)

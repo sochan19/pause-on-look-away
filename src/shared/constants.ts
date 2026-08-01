@@ -22,4 +22,4 @@ export const DETECTION_INTERVAL_MS = 100;
 // 開発者ツールのコンソールで大量のログに混ざっても、この拡張機能が出したログだと
 // フィルタ(検索)しやすくするための文字列。background/content両方から参照するので
 // ここに置く(1箇所で書き換えられるように、直接文字列リテラルを書き散らさない)。
-export const LOG_PREFIX = "[Gaze-Aware Playback]";
+export const LOG_PREFIX = "[GazePause]";

@@ -1,4 +1,4 @@
-# Gaze-Aware Playback — Claude Code 指示書
+# GazePause — Claude Code 指示書
 
 視線(顔向き)検出で YouTube / Prime Video を自動一時停止する Chrome 拡張(Manifest V3)。
 詳細は必ず `docs/requirements.md` と `docs/architecture.md` を参照すること。

@@ -94,7 +94,7 @@ async function refreshPermissionStatus(): Promise<void> {
     buttonEl.textContent =
       status.state === "granted" ? "再確認する" : "カメラを許可する";
   } catch (error) {
-    console.warn("[Gaze-Aware Playback] カメラ許可状態の確認に失敗:", error);
+    console.warn("[GazePause] カメラ許可状態の確認に失敗:", error);
     statusEl.textContent = "カメラ許可の状態を確認できませんでした。";
   }
 }
@@ -118,7 +118,7 @@ async function requestCameraPermission(): Promise<void> {
     }
     await refreshPermissionStatus();
   } catch (error) {
-    console.warn("[Gaze-Aware Playback] カメラ許可の取得に失敗:", error);
+    console.warn("[GazePause] カメラ許可の取得に失敗:", error);
     statusEl.textContent = "カメラの許可を取得できませんでした。";
   } finally {
     buttonEl.disabled = false;
@@ -170,7 +170,7 @@ async function saveSettingsAndShowStatus(
     await saveSettings(partial);
     settingsStatusEl.textContent = "保存しました";
   } catch (error) {
-    console.warn("[Gaze-Aware Playback] 設定の保存に失敗:", error);
+    console.warn("[GazePause] 設定の保存に失敗:", error);
     settingsStatusEl.textContent = "保存に失敗しました。";
   }
   // 2秒後にメッセージを消す。消し忘れて表示されっぱなしになる

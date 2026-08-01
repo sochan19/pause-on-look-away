@@ -1,4 +1,4 @@
-# システム設計書 — Gaze-Aware Playback (仮称)
+# システム設計書 — GazePause
 
 対応: `requirements.md`
 
@@ -105,7 +105,7 @@ Chrome拡張機能(Manifest V3)として実装する。以下4つのコンポー
 ## 6. ディレクトリ構成案
 
 ```
-gaze-aware-playback/
+gaze-pause/
 ├── manifest.json
 ├── src/
 │   ├── offscreen/
