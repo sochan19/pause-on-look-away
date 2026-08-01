@@ -57,15 +57,20 @@ export async function saveSettings(partial: Partial<Settings>): Promise<void> {
  * DECISIONS.md E-5決定事項を参照)。areaNameが"sync"以外("local"等)の変化は
  * このプロジェクトでは使っていないため無視する。
  *
- * この関数はoffscreen.ts/service-worker.tsのモジュール読み込み時(トップレベル)
- * から呼ばれる。実機検証で、offscreen documentが作られた直後のタイミングでは
- * 稀に chrome.storage 自体がまだ undefined になっていることが確認された
- * (Chrome側の権限バインディングの反映タイミングによる一時的な状態と見られる)。
+ * この関数はservice-worker.tsのモジュール読み込み時(トップレベル)から呼ばれる。
  * ここでtry/catchせずに例外を投げてしまうと、呼び出し元のモジュール全体の
  * 読み込みがそこで止まり、その後に書かれているonMessage()の登録(カメラの
- * START_CAMERA/STOP_CAMERA受信という中核機能)まで巻き込んで動かなくなって
+ * START_CAMERA/STOP_CAMERA中継という中核機能)まで巻き込んで動かなくなって
  * しまう。「設定の自動反映」という副次的な機能の初期化失敗が、動画一時停止
  * という主機能を道連れにしないよう、ここで確実に失敗を吸収する。
+ *
+ * 以前はoffscreen.tsもこの関数を直接呼んでいたが、Surface実機で
+ * 「offscreen document内でだけchrome.storageがundefinedになる」事象が
+ * 拡張機能を完全に削除・再読み込みしても再発することを確認したため、
+ * offscreen.tsはchrome.storageを一切呼ばず、代わりにservice-worker.tsから
+ * メッセージ(messages.tsのOffscreenControlMessage/SettingsUpdatedMessage)で
+ * 設定を受け取る設計に変更した。backgroundのchrome.storageアクセスは
+ * 同じ実機検証で安定して動作することを確認済み。
  */
 export function onSettingsChanged(handler: (settings: Settings) => void): void {
   try {

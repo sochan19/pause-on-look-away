@@ -49,11 +49,13 @@ import {
   type OffscreenControlMessage,
   type SetPlaybackMessage,
   type SetPlaybackResponse,
+  type SettingsUpdatedMessage,
 } from "../shared/messages";
 import {
   decidePlaybackCommand,
   nextPausedByExtension,
 } from "../shared/playback-policy";
+import type { Settings } from "../shared/settings";
 import { isCameraTargetUrl } from "../shared/site-detection";
 import type { ConfirmedState } from "../shared/viewing-state";
 
@@ -212,7 +214,13 @@ async function doRecomputeCameraActivation(): Promise<void> {
 
   if (isTargetActive) {
     await ensureOffscreenDocument();
-    await sendMessage<OffscreenControlMessage>({ type: "START_CAMERA" });
+    // 起動時点の設定を一緒に渡す(offscreen documentはchrome.storageを直接
+    // 読みに行かない設計のため。messages.tsのOffscreenControlMessageの
+    // コメント参照)。
+    await sendMessage<OffscreenControlMessage>({
+      type: "START_CAMERA",
+      settings,
+    });
     console.log(`${LOG_PREFIX} 対象サイトがアクティブ -> START_CAMERA`);
   } else if (await hasOffscreenDocument()) {
     // offscreen documentがまだ一度も作られていない(=一度もカメラを使っていない)
@@ -238,11 +246,48 @@ onStartup(() => {
   recomputeCameraActivation();
 });
 
-// optionsページから設定(特にF-20のenabled)が変更されたときも、タブの切り替えを
-// 待たずに即座にカメラ起動/停止へ反映させるための購読(手動確認項目: 設定 UI)。
-onSettingsChanged(() => {
+// optionsページから設定が変更されたときの購読。2つのことを行う。
+// 1. F-20のenabled変更を、タブの切り替えを待たずに即座にカメラ起動/停止へ反映する
+// 2. カメラが既に起動中のoffscreen documentへ、変更後の設定(判定感度等、F-21)を
+//    メッセージで届ける(offscreen document自身はchrome.storageを読みに行かない
+//    設計のため。messages.tsのOffscreenControlMessageのコメント参照)
+onSettingsChanged((settings) => {
   recomputeCameraActivation();
+  pushSettingsToOffscreenIfExists(settings);
 });
+
+// pushSettingsToOffscreenIfExists()の呼び出しを直列化するためのPromiseチェーン
+// (recomputeQueue/handleStateChangeQueueと同じパターン)。optionsページで複数の
+// 設定項目を短時間に連続して変更した場合、hasOffscreenDocument()の非同期待ちの間に
+// 呼び出し順が入れ替わり、古い設定のSETTINGS_UPDATEDが新しい設定のものより後に
+// 届いてしまう(offscreen documentのcurrentSettingsが一時的に古い値のままになる)
+// のを防ぐ。
+let pushSettingsQueue: Promise<void> = Promise.resolve();
+
+function pushSettingsToOffscreenIfExists(settings: Settings): void {
+  pushSettingsQueue = pushSettingsQueue
+    .then(() => doPushSettingsToOffscreenIfExists(settings))
+    .catch((error) => {
+      console.error(
+        `${LOG_PREFIX} pushSettingsToOffscreenIfExistsに失敗:`,
+        error,
+      );
+    });
+}
+
+async function doPushSettingsToOffscreenIfExists(
+  settings: Settings,
+): Promise<void> {
+  // offscreen documentがまだ一度も作られていない場合、わざわざ作ってまで
+  // 送る必要はない(次にSTART_CAMERAが送られる時に最新の設定が乗るため)。
+  if (!(await hasOffscreenDocument())) {
+    return;
+  }
+  await sendMessage<SettingsUpdatedMessage>({
+    type: "SETTINGS_UPDATED",
+    settings,
+  });
+}
 
 // offscreen documentからのメッセージ(CONFIRMED_STATE_CHANGED / CAMERA_ERROR)を
 // 受け取るリスナー。chrome.runtime.onMessageは拡張機能内の他のメッセージも

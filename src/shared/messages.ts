@@ -5,6 +5,7 @@
 // リテラルをここに集約する(code-reviewerの「マジック文字列/数値がsrc/shared/constants
 // に定義されているか」チェック項目と同じ考え方を、メッセージの型についても適用したもの)。
 
+import { isSettings, type Settings } from "./settings";
 import type { ConfirmedState } from "./viewing-state";
 
 // 動画に対して実行してほしい操作。"pause" = 一時停止、"resume" = 再生再開。
@@ -84,8 +85,22 @@ export function isSetPlaybackResponse(
 // offscreen document自体は常駐させ続け(モデルの再読み込みコストを避けるため)、
 // activeタブがカメラ判定の対象サイト(YouTube/Prime Video)かどうかに応じて
 // このメッセージでカメラの物理的なON/OFFだけを切り替える(DECISIONS.md E-2)。
+//
+// START_CAMERAにsettingsを持たせている理由(実機検証で発見した不具合への対応):
+// 当初はoffscreen documentが自分でchrome.storage.sync(getSettings/
+// onSettingsChanged)を呼んで判定感度(F-21)を取得する設計にしていたが、
+// Surface実機で「offscreen document内でだけchrome.storage自体がundefinedになる」
+// (Chrome側の権限バインディングのタイミングによると見られる)事象が、拡張機能を
+// 完全に削除・再読み込みしても再発することを確認した。この状態では
+// getSettings()は安全にデフォルト値へフォールバックするものの、結果として
+// 「ユーザーが設定画面で角度・フレーム数を変更しても検出ループに一切反映されない」
+// という不具合になっていた。
+// backgroundのchrome.storageアクセスは同じ実機検証で安定して動作することを
+// 確認済みのため、offscreen document側はchrome.storageに一切触れず、
+// 代わりにbackgroundから(START_CAMERAおよびSETTINGS_UPDATEDメッセージで)
+// 設定を「push」してもらう設計に変更した。
 export type OffscreenControlMessage =
-  | { type: "START_CAMERA" }
+  | { type: "START_CAMERA"; settings: Settings }
   | { type: "STOP_CAMERA" };
 
 export function isOffscreenControlMessage(
@@ -94,8 +109,33 @@ export function isOffscreenControlMessage(
   if (typeof message !== "object" || message === null) {
     return false;
   }
-  const candidate = message as { type?: unknown };
-  return candidate.type === "START_CAMERA" || candidate.type === "STOP_CAMERA";
+  const candidate = message as { type?: unknown; settings?: unknown };
+  if (candidate.type === "START_CAMERA") {
+    return isSettings(candidate.settings);
+  }
+  return candidate.type === "STOP_CAMERA";
+}
+
+// background → offscreen: 現在の設定(判定感度・自動再開等)が変わったことを伝える。
+// カメラが既に起動中(START_CAMERA済み)の間に、ユーザーがoptionsページで設定を
+// 変更した場合に、offscreen documentの検出ループへ即座に反映させるために使う
+// (START_CAMERA時点の設定は上記OffscreenControlMessageに乗せて渡すため、
+// このメッセージは「起動中の設定変更」専用)。
+export interface SettingsUpdatedMessage {
+  type: "SETTINGS_UPDATED";
+  settings: Settings;
+}
+
+export function isSettingsUpdatedMessage(
+  message: unknown,
+): message is SettingsUpdatedMessage {
+  if (typeof message !== "object" || message === null) {
+    return false;
+  }
+  const candidate = message as { type?: unknown; settings?: unknown };
+  return (
+    candidate.type === "SETTINGS_UPDATED" && isSettings(candidate.settings)
+  );
 }
 
 // offscreen → background: ヒステリシス状態機械(viewing-state.ts)の確定状態が

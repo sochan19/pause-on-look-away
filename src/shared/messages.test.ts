@@ -5,7 +5,9 @@ import {
   isOffscreenControlMessage,
   isSetPlaybackMessage,
   isSetPlaybackResponse,
+  isSettingsUpdatedMessage,
 } from "./messages";
+import { DEFAULT_SETTINGS } from "./settings";
 
 describe("isSetPlaybackMessage", () => {
   it("正しい形のSET_PLAYBACKメッセージはtrue", () => {
@@ -83,9 +85,24 @@ describe("isSetPlaybackResponse", () => {
 });
 
 describe("isOffscreenControlMessage", () => {
-  it("START_CAMERA/STOP_CAMERAはtrue", () => {
-    expect(isOffscreenControlMessage({ type: "START_CAMERA" })).toBe(true);
+  it("正しいsettingsを持つSTART_CAMERAはtrue", () => {
+    expect(
+      isOffscreenControlMessage({
+        type: "START_CAMERA",
+        settings: DEFAULT_SETTINGS,
+      }),
+    ).toBe(true);
+  });
+
+  it("STOP_CAMERAはsettingsが無くてもtrue", () => {
     expect(isOffscreenControlMessage({ type: "STOP_CAMERA" })).toBe(true);
+  });
+
+  it("START_CAMERAなのにsettingsが欠けている/不正な形ならfalse", () => {
+    expect(isOffscreenControlMessage({ type: "START_CAMERA" })).toBe(false);
+    expect(
+      isOffscreenControlMessage({ type: "START_CAMERA", settings: {} }),
+    ).toBe(false);
   });
 
   it("typeが違う/欠けている場合はfalse", () => {
@@ -97,6 +114,38 @@ describe("isOffscreenControlMessage", () => {
     expect(isOffscreenControlMessage(null)).toBe(false);
     expect(isOffscreenControlMessage(undefined)).toBe(false);
     expect(isOffscreenControlMessage("START_CAMERA")).toBe(false);
+  });
+});
+
+describe("isSettingsUpdatedMessage", () => {
+  it("正しいsettingsを持つSETTINGS_UPDATEDはtrue", () => {
+    expect(
+      isSettingsUpdatedMessage({
+        type: "SETTINGS_UPDATED",
+        settings: DEFAULT_SETTINGS,
+      }),
+    ).toBe(true);
+  });
+
+  it("settingsが欠けている/不正な形ならfalse", () => {
+    expect(isSettingsUpdatedMessage({ type: "SETTINGS_UPDATED" })).toBe(false);
+    expect(
+      isSettingsUpdatedMessage({ type: "SETTINGS_UPDATED", settings: {} }),
+    ).toBe(false);
+  });
+
+  it("typeが違う場合はfalse", () => {
+    expect(
+      isSettingsUpdatedMessage({
+        type: "OTHER",
+        settings: DEFAULT_SETTINGS,
+      }),
+    ).toBe(false);
+  });
+
+  it("オブジェクト以外はすべてfalse", () => {
+    expect(isSettingsUpdatedMessage(null)).toBe(false);
+    expect(isSettingsUpdatedMessage(undefined)).toBe(false);
   });
 });
 

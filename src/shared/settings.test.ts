@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampSettingNumber } from "./settings";
+import { clampSettingNumber, DEFAULT_SETTINGS, isSettings } from "./settings";
 
 describe("clampSettingNumber", () => {
   it("範囲内の値はそのまま返す", () => {
@@ -31,5 +31,41 @@ describe("clampSettingNumber", () => {
   it("Infinityはfallbackを返す", () => {
     expect(clampSettingNumber(Number.POSITIVE_INFINITY, 5, 45, 20)).toBe(20);
     expect(clampSettingNumber(Number.NEGATIVE_INFINITY, 5, 45, 20)).toBe(20);
+  });
+});
+
+describe("isSettings", () => {
+  it("DEFAULT_SETTINGSはtrue", () => {
+    expect(isSettings(DEFAULT_SETTINGS)).toBe(true);
+  });
+
+  it("フィールドが1つでも欠けていればfalse", () => {
+    const { enabled: _enabled, ...rest } = DEFAULT_SETTINGS;
+    expect(isSettings(rest)).toBe(false);
+  });
+
+  it("フィールドの型が違えばfalse", () => {
+    expect(isSettings({ ...DEFAULT_SETTINGS, facingThresholdDeg: "20" })).toBe(
+      false,
+    );
+  });
+
+  it("数値フィールドがNaN/Infinityならfalse", () => {
+    expect(
+      isSettings({ ...DEFAULT_SETTINGS, facingThresholdDeg: Number.NaN }),
+    ).toBe(false);
+    expect(
+      isSettings({
+        ...DEFAULT_SETTINGS,
+        confirmationFrameCount: Number.POSITIVE_INFINITY,
+      }),
+    ).toBe(false);
+  });
+
+  it("オブジェクト以外(null/文字列/数値等)はすべてfalse", () => {
+    expect(isSettings(null)).toBe(false);
+    expect(isSettings(undefined)).toBe(false);
+    expect(isSettings("settings")).toBe(false);
+    expect(isSettings(123)).toBe(false);
   });
 });

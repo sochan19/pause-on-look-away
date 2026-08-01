@@ -73,3 +73,27 @@ export function clampSettingNumber(
   }
   return Math.round(Math.min(max, Math.max(min, value)));
 }
+
+/**
+ * 値がSettings型の形をしているかどうかを確認する型ガード。
+ *
+ * background(service-worker.ts)からoffscreen documentへ設定をメッセージで
+ * 送るようになった(messages.tsのSettingsUpdatedMessage/OffscreenControlMessage
+ * 参照)ため、他のメッセージ型と同様に「本当にSettingsの形をしているか」を
+ * 受信側で確認できるようにする。chrome API/DOMに依存しない純粋関数なので
+ * Vitestでテストできる。
+ */
+export function isSettings(value: unknown): value is Settings {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<Record<keyof Settings, unknown>>;
+  return (
+    typeof candidate.enabled === "boolean" &&
+    typeof candidate.facingThresholdDeg === "number" &&
+    Number.isFinite(candidate.facingThresholdDeg) &&
+    typeof candidate.confirmationFrameCount === "number" &&
+    Number.isFinite(candidate.confirmationFrameCount) &&
+    typeof candidate.autoResumeEnabled === "boolean"
+  );
+}

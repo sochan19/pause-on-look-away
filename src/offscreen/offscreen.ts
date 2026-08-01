@@ -18,7 +18,6 @@
 
 import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 import { onMessage, sendMessage } from "../shared/chrome/runtime";
-import { getSettings, onSettingsChanged } from "../shared/chrome/storage";
 import { DETECTION_INTERVAL_MS, LOG_PREFIX } from "../shared/constants";
 import { requireNonNull } from "../shared/dom-utils";
 import {
@@ -29,6 +28,7 @@ import {
   type CameraErrorMessage,
   type ConfirmedStateChangedMessage,
   isOffscreenControlMessage,
+  isSettingsUpdatedMessage,
 } from "../shared/messages";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/settings";
 import {
@@ -64,18 +64,22 @@ let detectionIntervalId: ReturnType<typeof setInterval> | null = null;
 // 扱う。視聴対象外のタブに切り替えていた間の状態を持ち越す意味は無いため)。
 let hysteresisState = createInitialHysteresisState();
 
-// ユーザー設定(判定角度・ディレイフレーム数、Phase7・F-21)のキャッシュ。
-// offscreen documentはE-2決定によりブラウザ起動中ずっと常駐させる設計のため、
-// service worker(いつアイドルで終了されるかわからない)と違ってモジュール変数に
-// キャッシュを持たせても安全。読み込み時にgetSettings()で初期値を反映し、
-// 以後はonSettingsChanged()でoptionsページからの変更を都度反映する。
+// ユーザー設定(判定角度・ディレイフレーム数、F-21)のキャッシュ。
+// 初期値はDEFAULT_SETTINGS。実際の値はbackground(service worker)から
+// START_CAMERA/SETTINGS_UPDATEDメッセージで届く(下のonMessage参照)。
+//
+// なぜoffscreen document自身がchrome.storageを読みに行かないのか:
+// 当初はここでgetSettings()/onSettingsChanged()(chrome.storage.sync)を
+// 直接呼ぶ設計にしていたが、Surface実機で「offscreen document内でだけ
+// chrome.storageがundefinedになる」事象が、拡張機能を完全に削除・再読み込みしても
+// 再発することを確認した(messages.tsのOffscreenControlMessageのコメント参照)。
+// この状態でも例外で落ちることはない(getSettings()側で安全にフォールバックする
+// 実装にしていたため)が、結果として「設定画面で値を変えても検出ループに一切
+// 反映されない」という不具合になっていた。backgroundのchrome.storageアクセスは
+// 同じ実機検証で安定して動作することを確認済みのため、offscreen document側は
+// chrome.storageに一切触れず、backgroundからのメッセージだけを頼りにする設計に
+// 変更した。
 let currentSettings: Settings = DEFAULT_SETTINGS;
-void getSettings().then((settings) => {
-  currentSettings = settings;
-});
-onSettingsChanged((settings) => {
-  currentSettings = settings;
-});
 
 // 「カメラをON/OFFどちらにしたいか」という目標状態。backgroundからの
 // START_CAMERA/STOP_CAMERAメッセージが届くたびにこれを書き換える。
@@ -303,10 +307,21 @@ async function notifyCameraError(error: unknown): Promise<void> {
 }
 
 onMessage((message, _sender, _sendResponse) => {
+  // カメラ起動中の設定変更(optionsページでの変更がbackground経由で届く)。
+  if (isSettingsUpdatedMessage(message)) {
+    currentSettings = message.settings;
+    return false;
+  }
+
   if (!isOffscreenControlMessage(message)) {
     return false;
   }
 
+  // START_CAMERAにはその時点の設定が乗っているため、カメラを起動する前に反映しておく
+  // (検出ループが動き出す前に正しい値を使えるようにするため)。
+  if (message.type === "START_CAMERA") {
+    currentSettings = message.settings;
+  }
   setDesiredCameraState(message.type === "START_CAMERA" ? "on" : "off");
   return false;
 });
