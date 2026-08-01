@@ -36,6 +36,11 @@
         color: #666;
         margin: 2px 0 0;
       }
+      .setting-range {
+        font-weight: normal;
+        color: #666;
+        font-size: 12px;
+      }
       #settings-status {
         font-size: 13px;
         color: #2a7a2a;
@@ -64,7 +69,10 @@
     </div>
 
     <div class="setting-row">
-      <label for="facing-threshold-input">判定角度のしきい値(度)</label>
+      <label for="facing-threshold-input">
+        判定角度のしきい値(度)
+        <span id="facing-threshold-range" class="setting-range"></span>
+      </label>
       <input type="number" id="facing-threshold-input" step="1" />
       <p class="setting-hint">
         顔がこの角度以上カメラから逸れたら「よそ見」の候補とみなします。
@@ -75,6 +83,7 @@
     <div class="setting-row">
       <label for="confirmation-frame-count-input">
         ディレイフレーム数(1フレーム約0.1秒)
+        <span id="confirmation-frame-count-range" class="setting-range"></span>
       </label>
       <input type="number" id="confirmation-frame-count-input" step="1" />
       <p class="setting-hint">

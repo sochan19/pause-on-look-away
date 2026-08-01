@@ -66,6 +66,14 @@ const settingsStatusEl = requireNonNull(
   document.querySelector<HTMLParagraphElement>("#settings-status"),
   "options.htmlに#settings-statusが見つかりません。",
 );
+const facingThresholdRangeEl = requireNonNull(
+  document.querySelector<HTMLSpanElement>("#facing-threshold-range"),
+  "options.htmlに#facing-threshold-rangeが見つかりません。",
+);
+const confirmationFrameCountRangeEl = requireNonNull(
+  document.querySelector<HTMLSpanElement>("#confirmation-frame-count-range"),
+  "options.htmlに#confirmation-frame-count-rangeが見つかりません。",
+);
 
 /**
  * navigator.permissions.query()で現在のカメラ許可状態を確認し、表示を更新する。
@@ -121,13 +129,16 @@ void refreshPermissionStatus();
 
 // ここから下がPhase7で追加した設定UI(F-20, F-21)。
 
-// 数値入力欄のmin/max属性を、settings.tsで定義した境界値定数から設定する。
-// HTML側に同じ数値を直接書くと、将来境界値を変更した際にHTMLとTypeScriptの
-// 両方を書き換え忘れる恐れがあるため、TypeScript側の定数を単一の情報源にする。
+// 数値入力欄のmin/max属性と、ラベル横に表示する範囲の案内テキストを、
+// settings.tsで定義した境界値定数から設定する。HTML側に同じ数値を直接書くと、
+// 将来境界値を変更した際にHTMLとTypeScriptの両方を書き換え忘れる恐れがあるため、
+// TypeScript側の定数を単一の情報源にする。
 facingThresholdInput.min = String(FACING_THRESHOLD_MIN_DEG);
 facingThresholdInput.max = String(FACING_THRESHOLD_MAX_DEG);
+facingThresholdRangeEl.textContent = `(${FACING_THRESHOLD_MIN_DEG}〜${FACING_THRESHOLD_MAX_DEG})`;
 confirmationFrameCountInput.min = String(CONFIRMATION_FRAME_COUNT_MIN);
 confirmationFrameCountInput.max = String(CONFIRMATION_FRAME_COUNT_MAX);
+confirmationFrameCountRangeEl.textContent = `(${CONFIRMATION_FRAME_COUNT_MIN}〜${CONFIRMATION_FRAME_COUNT_MAX})`;
 
 /**
  * chrome.storage.syncに保存されている現在の設定を読み込み、フォームへ反映する。
