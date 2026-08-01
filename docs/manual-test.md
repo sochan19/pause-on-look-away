@@ -269,7 +269,17 @@ DECISIONS.md参照)。
 発火しないため)。この拡張機能はそもそも「アクティブタブの動画」のみを制御対象と
 しており(F-10)、複数タブの同時視聴・同時自動再開はサポート範囲外。
 
+## 拡張機能アイコン
+
+要手動確認(`public/icons/`のPNGが実際にChrome上で正しく表示されるかは
+自動テスト不可のため)。
+
+- [x] `chrome://extensions`の拡張機能一覧・詳細ページ、およびツールバーに
+      新しいアイコン(目+一時停止のデザイン)が表示される
+      — 確認日: 2026-08-01(Surface実機)。問題無し
+
 ---
 最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: 9f30e5b(Phase 5 offscreen documentへのカメラ処理統合。Surface実機で本物の視線検出によるYouTube自動pause/resumeを一気通貫で確認。検証中にoptionsページ方式への切り替え・CSP(wasm-unsafe-eval)修正の2件のバグを発見・対応)
 最終確認日: 2026-07-31 / 確認者: ユーザー / 対象コミット: e78d605(Phase 6 Prime Videoのpause/resume制御を有効化。Surface実機でPrime Video実アカウントの実際の作品再生を使い、DRM/EMEストリームに対するpause/resumeとプレイヤーUIとの同期、広告表示中の本編video選定、話数間のSPA遷移、iframe構造の有無を確認)
 最終確認日: 2026-08-01 / 確認者: ユーザー / 対象コミット: 1ad9ae8(Phase 7 設定画面(F-20カメラ有効/無効、F-21判定感度・自動再開)の実装完了。Surface実機で検証中に2件のバグを発見・修正: (1) 手動一時停止した動画が視線復帰で勝手に再生される不具合〔pausedByExtensionをタブ単位でchrome.storage.sessionに保存する設計へ変更〕、(2) 判定感度の設定変更がoffscreen documentに反映されない不具合〔offscreen documentがchrome.storageを直接読まず、backgroundからのメッセージで設定を受け取る設計へ変更〕。既知の制約: 複数タブ同時視聴時の自動再開はアクティブタブ単位のみ。F-20時のoffscreen documentの「カメラ停止」ログ不出力は実害無しのためユーザー判断で調査見送り
+最終確認日: 2026-08-01 / 確認者: ユーザー / 対象コミット: 1315e62(拡張機能アイコン追加。ユーザーが別セッションで生成した目+一時停止デザインの画像をsharpで16/32/48/128pxに書き出し、manifest.jsonのicons/action.default_iconに設定。Surface実機でツールバー・拡張機能一覧の表示を確認)
